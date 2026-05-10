@@ -130,7 +130,7 @@ La interpretación es coherente: aunque los tres p-valores son cercanos a cero, 
 
 \subsection*{Diseño común}
 
-Para los tres modelos se siguió el mismo protocolo: división estratificada del conjunto en entrenamiento (75\,\%) y prueba (25\,\%), con semilla fija para garantizar reproducibilidad. Las variables categóricas se codificaron mediante variables \textit{dummy} con eliminación de la primera categoría para evitar colinealidad. El ajuste se realizó con \texttt{statsmodels}, que permite reportar errores estándar e intervalos de confianza adecuados para inferencia. La elección de cada métrica de evaluación responde a la naturaleza de la variable: AUC y curva ROC para la binaria, AIC para los modelos de conteo y devianza explicada para el modelo Gamma.
+Las variables categóricas se codificaron mediante variables \textit{dummy} con eliminación de la primera categoría para evitar colinealidad. El ajuste se realizó con \texttt{statsmodels}, que permite reportar errores estándar e intervalos de confianza adecuados para inferencia. Para el modelo logístico se utilizó división estratificada del conjunto en entrenamiento (75\,\%) y prueba (25\,\%), con semilla fija para garantizar reproducibilidad y validar el desempeño predictivo fuera de muestra. Los modelos de conteo (Poisson y Binomial Negativa) y el modelo Gamma se ajustaron sobre todo el conjunto, ya que su evaluación se basa en métricas globales de bondad de ajuste (AIC, devianza explicada) y no en predicción individual. La elección de cada métrica responde a la naturaleza de la variable: AUC y curva ROC para la binaria, AIC para los modelos de conteo y devianza explicada para el modelo Gamma.
 
 \subsection{Readmisión a 30 días}
 
@@ -159,7 +159,7 @@ El modelo no predice de forma exacta, pero sí permite identificar qué factores
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.78\linewidth]{figuras/fig4_or_logistica.png}
-\caption{Efectos principales de la regresión logística expresados como factores multiplicativos sobre la probabilidad de readmisión, con intervalos de confianza al 95\,\%.}
+\caption{Efectos principales de la regresión logística expresados como razones de probabilidades (OR), con intervalos de confianza al 95\,\%. Cuando la prevalencia es baja como aquí ($\sim$9\,\%), la razón de probabilidades aproxima al riesgo relativo.}
 \label{fig:or}
 \end{figure}
 
@@ -167,11 +167,11 @@ Los efectos más relevantes (Tabla \ref{tab:or}) fueron:
 
 \begin{table}[H]
 \centering
-\caption{Factores asociados con la readmisión a 30 días (todos con $p < 0.01$)}
+\caption{Factores asociados con la readmisión a 30 días (razones de probabilidades, todos con $p < 0.01$)}
 \label{tab:or}
 \begin{tabular}{lcc}
 \toprule
-Variable & Factor multiplicativo & IC 95\,\% \\
+Variable & Razón de probabilidades & IC 95\,\% \\
 \midrule
 Admisiones previas (cada una) & 1.40 & [1.36, 1.46] \\
 Uso de medicamento para diabetes & 1.21 & [1.11, 1.32] \\
@@ -182,11 +182,11 @@ Número de diagnósticos (cada uno) & 1.04 & [1.02, 1.06] \\
 \end{tabular}
 \end{table}
 
-El predictor más importante es el historial de admisiones previas: cada ingreso adicional aumenta la probabilidad de readmisión por un factor cercano a 1.40 (alrededor de 40\,\% más alta que la de un paciente comparable sin ese antecedente). En conjunto, los pacientes con mayor historia de uso hospitalario presentan un mayor riesgo de readmisión temprana.
+El predictor más importante es el historial de admisiones previas: cada ingreso adicional incrementa la razón de probabilidades de readmisión en un factor cercano a 1.40, equivalente a aproximadamente 40\,\% más oportunidad de reingreso que un paciente comparable sin ese antecedente. En conjunto, los pacientes con mayor historia de uso hospitalario presentan un mayor riesgo de readmisión temprana.
 
 \subsection{Recurrencia hospitalaria}
 
-La recurrencia se modeló como conteo. Primero se probó Poisson, pero los datos mostraban sobredispersión: la varianza era mayor que la media. Por eso se comparó contra una Binomial Negativa. Los modelos se compararon mediante el AIC (\textit{criterio de información de Akaike}), una medida que combina el ajuste del modelo con una penalización por su complejidad: a menor AIC, mejor balance entre ajuste y parsimonia.
+La recurrencia se modeló como conteo. Primero se probó Poisson, pero los datos mostraban sobredispersión: la varianza era mayor que la media (Var/Media $\approx$ 2.05). Por eso se comparó contra una Binomial Negativa, cuyo parámetro de dispersión $\alpha$ se estimó por máxima verosimilitud ($\alpha_{\text{MLE}} = 4.28$). Los modelos se compararon mediante el AIC (\textit{criterio de información de Akaike}), una medida que combina el ajuste del modelo con una penalización por su complejidad: a menor AIC, mejor balance entre ajuste y parsimonia.
 
 \begin{table}[H]
 \centering
@@ -196,12 +196,12 @@ La recurrencia se modeló como conteo. Primero se probó Poisson, pero los datos
 Modelo & AIC & Dispersión Pearson & Pseudo \(R^2\) \\
 \midrule
 Poisson & 73,034.86 & 1.93 & 0.129 \\
-Binomial Negativa & 64,529.27 & 1.06 & 0.065 \\
+Binomial Negativa (MLE) & 64,346.37 & 1.13 & 0.065 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-La Binomial Negativa obtuvo un AIC sustancialmente menor ($\Delta\text{AIC} \approx 8{,}688$ a favor de la Binomial Negativa), lo que confirma que la recurrencia presenta sobredispersión (Figura \ref{fig:aic}): un subconjunto de pacientes concentra una fracción desproporcionada del uso hospitalario.
+La Binomial Negativa obtuvo un AIC sustancialmente menor ($\Delta\text{AIC} = 8{,}688$ a favor de la Binomial Negativa), y su dispersión Pearson se reduce a 1.13 (cercana al valor ideal de 1), lo que confirma que la sobredispersión se modela adecuadamente (Figura \ref{fig:aic}). Un subconjunto de pacientes concentra una fracción desproporcionada del uso hospitalario.
 
 \begin{figure}[H]
 \centering
