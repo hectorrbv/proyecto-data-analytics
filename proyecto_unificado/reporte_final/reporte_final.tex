@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
@@ -15,9 +15,9 @@
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
 
-\geometry{margin=2.3cm}
-\setlist[itemize]{leftmargin=1.5em}
-\setlist[enumerate]{leftmargin=1.5em}
+\geometry{margin=2cm}
+\setlist[itemize]{leftmargin=1.4em, itemsep=0.15em, topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.4em, itemsep=0.15em, topsep=0.3em}
 
 \title{\textbf{Análisis de Readmisiones Hospitalarias, Recurrencia y Estancia en Pacientes Diabéticos}}
 \author{Proyecto Final de Data Analytics}
@@ -35,29 +35,13 @@ Este proyecto analiza datos hospitalarios de pacientes con diabetes para estudia
 
 El hospital quiere entender mejor por qué algunos pacientes con diabetes regresan pronto, por qué otros acumulan varias admisiones y por qué ciertas estancias duran más. Esto importa porque las readmisiones afectan la calidad de atención y también presionan camas, personal y costos.
 
-El proyecto responde tres preguntas:
-
-\begin{enumerate}
-    \item ?`Qué factores se relacionan con la readmisión en menos de 30 días?
-    \item ?`Qué factores se relacionan con más admisiones hospitalarias previas?
-    \item ?`Qué factores se relacionan con estancias más largas?
-\end{enumerate}
+El proyecto responde tres preguntas: (1) ?`qué factores se relacionan con la readmisión en menos de 30 días?, (2) ?`qué factores se relacionan con más admisiones hospitalarias previas? y (3) ?`qué factores se relacionan con estancias más largas?
 
 \section{Datos y preparación}
 
 Se trabajó con el conjunto \textit{Diabetes 130-Hospitals}. La base original contiene 101,766 admisiones y 50 variables. Para la versión final se siguió la limpieza más estricta: se conservaron pacientes únicos, se excluyeron egresos terminales y se eliminaron variables con demasiados faltantes. La muestra final quedó en 69,970 observaciones.
 
-Las decisiones de limpieza más importantes fueron:
-
-\begin{itemize}
-    \item convertir valores \texttt{?} en faltantes reales;
-    \item eliminar \texttt{weight}, porque tenía demasiados faltantes;
-    \item conservar algunas ausencias como categoría \textit{desconocido}, cuando podían tener valor informativo;
-    \item usar solo un registro por paciente para mejorar la independencia de observaciones;
-    \item crear la variable \texttt{readmit\_30d}, que vale 1 si el paciente regresó en menos de 30 días.
-\end{itemize}
-
-La calidad de la limpieza condiciona directamente la validez de los modelos posteriores, por lo que cada decisión se documentó con su criterio de inclusión o exclusión.
+Las decisiones de limpieza más relevantes fueron: convertir los valores \texttt{?} en faltantes reales, eliminar \texttt{weight} por exceso de faltantes, conservar algunas ausencias como categoría \textit{Desconocido} cuando aportaban información, usar solo un registro por paciente para preservar la independencia de las observaciones y crear la variable binaria \texttt{readmit\_30d} (1 si el paciente regresó en menos de 30 días). La calidad de la limpieza condiciona directamente la validez de los modelos posteriores, por lo que cada decisión se documentó con su criterio de inclusión o exclusión.
 
 \section{Análisis exploratorio}
 
@@ -65,7 +49,7 @@ La primera figura resume las tres variables principales del proyecto: estancia, 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\linewidth]{figuras/fig1_distribuciones.png}
+\includegraphics[width=0.85\linewidth]{figuras/fig1_distribuciones.png}
 \caption{Distribuciones de las variables respuesta: estancia, admisiones previas y readmisión a 30 días.}
 \label{fig:dist}
 \end{figure}
@@ -76,7 +60,7 @@ También se revisó la tasa de readmisión por edad.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\linewidth]{figuras/fig2_readmit_edad.png}
+\includegraphics[width=0.7\linewidth]{figuras/fig2_readmit_edad.png}
 \caption{Tasa de readmisión a 30 días por grupo de edad.}
 \label{fig:edad}
 \end{figure}
@@ -87,7 +71,7 @@ Para revisar relaciones entre variables numéricas se usó correlación de Spear
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.72\linewidth]{figuras/fig3_corr_spearman.png}
+\includegraphics[width=0.6\linewidth]{figuras/fig3_corr_spearman.png}
 \caption{Correlación de Spearman entre variables clínicas y de uso hospitalario.}
 \label{fig:corr}
 \end{figure}
@@ -96,30 +80,22 @@ La matriz muestra que las variables de uso previo del hospital se mueven juntas:
 
 \section{Inferencia estadística}
 
-Después del análisis visual se aplicaron pruebas estadísticas para confirmar si los patrones observados eran razonables.
-
-Se usaron:
-
-\begin{itemize}
-    \item Kolmogorov-Smirnov para revisar la forma de la estancia;
-    \item Mann-Whitney para comparar estancia entre pacientes readmitidos y no readmitidos;
-    \item Chi-cuadrada para revisar asociación entre diagnóstico y readmisión;
-    \item Kruskal-Wallis para comparar estancia entre grupos de edad.
-\end{itemize}
+Para confirmar formalmente los patrones observados se aplicaron cuatro pruebas: Kolmogorov-Smirnov (forma de la estancia), Mann-Whitney (estancia entre readmitidos y no readmitidos), Chi-cuadrada (asociación entre diagnóstico y readmisión) y Kruskal-Wallis (estancia entre grupos de edad).
 
 Los resultados confirman que existen diferencias reales entre los grupos. Aun así, con un tamaño de muestra tan grande casi cualquier diferencia resulta estadísticamente significativa, por lo que el valor del p-valor por sí solo no basta. Por eso se acompañaron las pruebas con tamaños de efecto, que cuantifican la magnitud práctica de cada diferencia (Tabla \ref{tab:effects}).
 
 \begin{table}[H]
 \centering
+\small
 \caption{Pruebas de inferencia y tamaños de efecto correspondientes}
 \label{tab:effects}
-\begin{tabular}{lcccl}
+\begin{tabular}{llccl}
 \toprule
-Prueba & Estadístico & p-valor & Efecto & Magnitud \\
+Prueba & Comparación & p-valor & Efecto & Magnitud \\
 \midrule
-Mann-Whitney (estancia $\sim$ readmisión) & $U=1.76\times 10^8$ & $1.7\times 10^{-56}$ & Cliff's $\delta = -0.12$ & pequeño \\
-Chi$^2$ (diagnóstico $\times$ readmisión) & $\chi^2 = 75.2$ & $1.4\times 10^{-12}$ & V de Cramér $= 0.033$ & trivial \\
-Kruskal-Wallis (estancia $\sim$ edad) & $H = 1{,}439$ & $\sim 0$ & $\varepsilon^2 = 0.020$ & pequeño \\
+Mann-Whitney   & estancia $\sim$ readmisión   & $1.7\times 10^{-56}$ & Cliff's $\delta = -0.12$ & pequeño \\
+Chi$^2$        & diagnóstico $\times$ readm.  & $1.4\times 10^{-12}$ & V Cramér $= 0.033$       & trivial \\
+Kruskal-Wallis & estancia $\sim$ edad         & $\sim 0$             & $\varepsilon^2 = 0.020$  & pequeño \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -130,26 +106,19 @@ La interpretación es coherente: aunque los tres p-valores son cercanos a cero, 
 
 \subsection*{Diseño común}
 
-Las variables categóricas se codificaron mediante variables \textit{dummy} con eliminación de la primera categoría para evitar colinealidad. El ajuste se realizó con \texttt{statsmodels}, que permite reportar errores estándar e intervalos de confianza adecuados para inferencia. Para el modelo logístico se utilizó división estratificada del conjunto en entrenamiento (75\,\%) y prueba (25\,\%), con semilla fija para garantizar reproducibilidad y validar el desempeño predictivo fuera de muestra. Los modelos de conteo (Poisson y Binomial Negativa) y el modelo Gamma se ajustaron sobre todo el conjunto, ya que su evaluación se basa en métricas globales de bondad de ajuste (AIC, devianza explicada) y no en predicción individual. La elección de cada métrica responde a la naturaleza de la variable: AUC y curva ROC para la binaria, AIC para los modelos de conteo y devianza explicada para el modelo Gamma.
+Las categóricas se codificaron como \textit{dummies} (eliminando la primera categoría para evitar colinealidad). El ajuste se realizó con \texttt{statsmodels}. La logística se entrenó con división estratificada 75\,/\,25 con semilla fija; los modelos de conteo y el Gamma se ajustaron sobre todo el conjunto porque su evaluación es global (AIC, devianza explicada) y no de predicción individual.
 
 \subsection{Readmisión a 30 días}
 
 Para readmisión se usó regresión logística, porque la variable objetivo es binaria: el paciente se readmite en menos de 30 días o no.
 
-El desempeño en el conjunto de prueba fue:
-
-\begin{itemize}
-    \item Prevalencia de la clase positiva: 8.97\,\% (clase desbalanceada).
-    \item AUC ROC: 0.608.
-    \item PR-AUC (precisión promedio): 0.137, frente a una línea base aleatoria de 0.090.
-    \item Pseudo \(R^2\) de McFadden: 0.023.
-\end{itemize}
+El desempeño en el conjunto de prueba: AUC ROC $= 0.608$, PR-AUC $= 0.137$ frente a una línea base aleatoria de 0.090 (prevalencia 8.97\,\%), y pseudo $R^2$ de McFadden $= 0.023$.
 
 Con una prevalencia tan baja, la curva ROC tiende a sobreestimar el desempeño percibido; por eso se reporta también la curva precisión-recall, más informativa cuando la clase positiva es rara (Figura \ref{fig:rocpr}). El AUC obtenido es modesto pero coherente con el rango típico de la literatura cuando se utilizan únicamente variables administrativas y clínicas estructuradas, sin notas médicas ni biomarcadores.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\linewidth]{figuras/fig6_roc_pr_logistica.png}
+\includegraphics[width=0.85\linewidth]{figuras/fig6_roc_pr_logistica.png}
 \caption{Diagnóstico del modelo logístico: curva ROC, curva precisión-recall y distribución de probabilidades predichas por clase real.}
 \label{fig:rocpr}
 \end{figure}
@@ -158,7 +127,7 @@ El modelo no predice de forma exacta, pero sí permite identificar qué factores
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.78\linewidth]{figuras/fig4_or_logistica.png}
+\includegraphics[width=0.65\linewidth]{figuras/fig4_or_logistica.png}
 \caption{Efectos principales de la regresión logística expresados como razones de probabilidades (OR), con intervalos de confianza al 95\,\%. Cuando la prevalencia es baja como aquí ($\sim$9\,\%), la razón de probabilidades aproxima al riesgo relativo.}
 \label{fig:or}
 \end{figure}
@@ -205,7 +174,7 @@ La Binomial Negativa obtuvo un AIC sustancialmente menor ($\Delta\text{AIC} = 8{
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.92\linewidth]{figuras/fig7_aic_poisson_nb.png}
+\includegraphics[width=0.78\linewidth]{figuras/fig7_aic_poisson_nb.png}
 \caption{Distribución observada de admisiones previas (escala logarítmica) y comparación de AIC entre los modelos Poisson y Binomial Negativa.}
 \label{fig:aic}
 \end{figure}
@@ -218,7 +187,7 @@ Para la duración de estancia se usó un modelo Gamma con enlace logarítmico. L
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.92\linewidth]{figuras/fig5_diag_gamma.png}
+\includegraphics[width=0.78\linewidth]{figuras/fig5_diag_gamma.png}
 \caption{Diagnóstico del modelo Gamma para duración de estancia.}
 \label{fig:gamma}
 \end{figure}
@@ -227,37 +196,27 @@ El modelo Gamma alcanzó un pseudo $R^2$ basado en devianza de 0.28, un valor sa
 
 \section{Recomendaciones}
 
-Los resultados se pueden traducir en tres recomendaciones:
-
-\begin{enumerate}
-    \item Crear un programa de seguimiento al alta para pacientes con mayor uso previo del hospital.
-    \item Usar visitas previas a urgencias e ingresos previos como señales tempranas de recurrencia.
-    \item Considerar diagnóstico y complejidad clínica para planear camas y recursos.
-\end{enumerate}
-
-La recomendación principal es priorizar a los pacientes con mayor complejidad clínica y mayor uso previo del sistema. Dado que el riesgo no es homogéneo, una asignación diferenciada de recursos resulta más eficiente desde el punto de vista operativo.
+Los resultados se traducen en tres recomendaciones operativas: (1) crear un programa de seguimiento al alta para pacientes con mayor uso previo del hospital; (2) emplear las visitas previas a urgencias y los ingresos previos como señales tempranas de recurrencia; y (3) considerar el diagnóstico y la complejidad clínica al planear camas y recursos. La recomendación principal es priorizar a los pacientes con mayor complejidad clínica y mayor uso previo del sistema: dado que el riesgo no es homogéneo, una asignación diferenciada de recursos resulta más eficiente.
 
 \section{Limitaciones}
 
-El análisis describe asociaciones, no relaciones causales. Adicionalmente, el dataset es de naturaleza administrativa, contiene faltantes relevantes y corresponde a hospitales de Estados Unidos entre 1999 y 2008. Las conclusiones específicas deben interpretarse como una guía contextual, no como una regla generalizable.
-
-Trabajar con un único registro por paciente mejora la independencia de las observaciones, pero reduce el tamaño efectivo de la muestra y descarta información sobre la trayectoria de cada paciente a lo largo del tiempo. Esto implica que el análisis describe el riesgo en una única visita, pero no captura cómo evoluciona ese riesgo con sucesivas admisiones. Una extensión natural sería utilizar modelos longitudinales o de efectos mixtos, que permiten incluir todas las admisiones de un mismo paciente reconociendo que esas observaciones están correlacionadas entre sí, en lugar de tratarlas como si fueran independientes.
+El análisis describe asociaciones, no relaciones causales. El dataset es administrativo, contiene faltantes relevantes y corresponde a hospitales de EE.\,UU.\ entre 1999 y 2008, por lo que las conclusiones deben interpretarse como guía contextual y no como regla generalizable. Adicionalmente, conservar un solo registro por paciente mejora la independencia de las observaciones pero descarta la trayectoria a lo largo del tiempo: el análisis describe el riesgo en una única visita y no captura cómo evoluciona con sucesivas admisiones. Una extensión natural serían los modelos longitudinales o de efectos mixtos, que aprovechan todas las admisiones del mismo paciente reconociendo que sus observaciones están correlacionadas.
 
 \section{Conclusión}
 
-La readmisión, la recurrencia y la duración de la estancia comparten señales comunes de complejidad clínica y uso previo del sistema, aunque no constituyen el mismo fenómeno. Por ello se utilizaron herramientas distintas: regresión logística para readmisión, modelos de conteo para recurrencia y un modelo Gamma para la estancia.
-
-La conclusión central es que los pacientes con mayor historia de uso hospitalario y mayor complejidad clínica concentran buena parte del riesgo operativo. Su identificación temprana puede contribuir a reducir readmisiones, optimizar la planeación de camas y mejorar el seguimiento posterior al alta.
+Readmisión, recurrencia y duración de la estancia comparten señales de complejidad clínica y uso previo del sistema, pero no son el mismo fenómeno; por ello se ajustaron tres modelos distintos. La conclusión operativa central: los pacientes con mayor historia de uso hospitalario y mayor complejidad clínica concentran buena parte del riesgo, y su identificación temprana puede reducir readmisiones, optimizar la planeación de camas y mejorar el seguimiento posterior al alta.
 
 \section*{Referencias}
 
-\begin{enumerate}[label={[\arabic*]}]
-    \item Strack, B., DeShazo, J. P., Gennings, C., Olmo, J. L., Ventura, S., Cios, K. J., y Clore, J. N. (2014). \textit{Impact of HbA1c measurement on hospital readmission rates: analysis of 70,000 clinical database patient records}. BioMed Research International, 2014, 781670.
+{\small
+\begin{enumerate}[label={[\arabic*]}, leftmargin=1.6em, itemsep=0.1em, topsep=0.2em]
+    \item Strack, B., DeShazo, J. P., Gennings, C., Olmo, J. L., Ventura, S., Cios, K. J., y Clore, J. N. (2014). \textit{Impact of HbA1c measurement on hospital readmission rates}. BioMed Research International, 2014, 781670.
     \item Cameron, A. C. y Trivedi, P. K. (2013). \textit{Regression Analysis of Count Data}, 2.\textsuperscript{a} ed. Cambridge University Press.
     \item McCullagh, P. y Nelder, J. A. (1989). \textit{Generalized Linear Models}, 2.\textsuperscript{a} ed. Chapman \& Hall/CRC.
-    \item Agency for Healthcare Research and Quality (AHRQ). \textit{Clinical Classifications Software (CCS) for ICD-9-CM}. Disponible en: \texttt{hcup-us.ahrq.gov}.
-    \item Akaike, H. (1974). \textit{A new look at the statistical model identification}. IEEE Transactions on Automatic Control, 19(6), 716--723.
-    \item Seabold, S. y Perktold, J. (2010). \textit{Statsmodels: Econometric and statistical modeling with Python}. Proceedings of the 9th Python in Science Conference.
+    \item AHRQ. \textit{Clinical Classifications Software (CCS) for ICD-9-CM}. \texttt{hcup-us.ahrq.gov}.
+    \item Akaike, H. (1974). \textit{A new look at the statistical model identification}. IEEE TAC, 19(6), 716--723.
+    \item Seabold, S. y Perktold, J. (2010). \textit{Statsmodels}. Proc.\ 9th Python in Science Conference.
 \end{enumerate}
+}
 
 \end{document}
