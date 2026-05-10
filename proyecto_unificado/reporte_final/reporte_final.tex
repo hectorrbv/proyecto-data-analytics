@@ -107,31 +107,82 @@ Se usaron:
     \item Kruskal-Wallis para comparar estancia entre grupos de edad.
 \end{itemize}
 
-Los resultados confirman que existen diferencias reales entre los grupos. Aun así, con un tamaño de muestra tan grande casi cualquier diferencia resulta estadísticamente significativa, por lo que el valor del p-valor por sí solo no basta. Por eso se evaluó también el tamaño de cada efecto: una diferencia de un día en la mediana de estancia, por ejemplo, es modesta en términos estadísticos pero relevante a escala hospitalaria.
+Los resultados confirman que existen diferencias reales entre los grupos. Aun así, con un tamaño de muestra tan grande casi cualquier diferencia resulta estadísticamente significativa, por lo que el valor del p-valor por sí solo no basta. Por eso se acompañaron las pruebas con tamaños de efecto, que cuantifican la magnitud práctica de cada diferencia (Tabla \ref{tab:effects}).
+
+\begin{table}[H]
+\centering
+\caption{Pruebas de inferencia y tamaños de efecto correspondientes}
+\label{tab:effects}
+\begin{tabular}{lcccl}
+\toprule
+Prueba & Estadístico & p-valor & Efecto & Magnitud \\
+\midrule
+Mann-Whitney (estancia $\sim$ readmisión) & $U=1.76\times 10^8$ & $1.7\times 10^{-56}$ & Cliff's $\delta = -0.12$ & pequeño \\
+Chi$^2$ (diagnóstico $\times$ readmisión) & $\chi^2 = 75.2$ & $1.4\times 10^{-12}$ & V de Cramér $= 0.033$ & trivial \\
+Kruskal-Wallis (estancia $\sim$ edad) & $H = 1{,}439$ & $\sim 0$ & $\varepsilon^2 = 0.020$ & pequeño \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La interpretación es coherente: aunque los tres p-valores son cercanos a cero, las magnitudes de efecto son pequeñas. Es decir, las diferencias son reales pero modestas. Una diferencia de un día en la mediana de estancia es estadísticamente menor pero relevante a escala hospitalaria.
 
 \section{Modelos estadísticos}
+
+\subsection*{Diseño común}
+
+Para los tres modelos se siguió el mismo protocolo: división estratificada del conjunto en entrenamiento (75\,\%) y prueba (25\,\%), con semilla fija para garantizar reproducibilidad. Las variables categóricas se codificaron mediante variables \textit{dummy} con eliminación de la primera categoría para evitar colinealidad. El ajuste se realizó con \texttt{statsmodels}, que permite reportar errores estándar e intervalos de confianza adecuados para inferencia. La elección de cada métrica de evaluación responde a la naturaleza de la variable: AUC y curva ROC para la binaria, AIC para los modelos de conteo y devianza explicada para el modelo Gamma.
 
 \subsection{Readmisión a 30 días}
 
 Para readmisión se usó regresión logística, porque la variable objetivo es binaria: el paciente se readmite en menos de 30 días o no.
 
-El desempeño fue moderado:
+El desempeño en el conjunto de prueba fue:
 
 \begin{itemize}
-    \item AUC en prueba: 0.608.
+    \item Prevalencia de la clase positiva: 8.97\,\% (clase desbalanceada).
+    \item AUC ROC: 0.608.
+    \item PR-AUC (precisión promedio): 0.137, frente a una línea base aleatoria de 0.090.
     \item Pseudo \(R^2\) de McFadden: 0.023.
 \end{itemize}
+
+Con una prevalencia tan baja, la curva ROC tiende a sobreestimar el desempeño percibido; por eso se reporta también la curva precisión-recall, más informativa cuando la clase positiva es rara (Figura \ref{fig:rocpr}). El AUC obtenido es modesto pero coherente con el rango típico de la literatura cuando se utilizan únicamente variables administrativas y clínicas estructuradas, sin notas médicas ni biomarcadores.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{figuras/fig6_roc_pr_logistica.png}
+\caption{Diagnóstico del modelo logístico: curva ROC, curva precisión-recall y distribución de probabilidades predichas por clase real.}
+\label{fig:rocpr}
+\end{figure}
 
 El modelo no predice de forma exacta, pero sí permite identificar qué factores acompañan al riesgo de readmisión.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.78\linewidth]{figuras/fig4_or_logistica.png}
-\caption{Efectos principales de la regresión logística expresados como factores multiplicativos sobre la probabilidad de readmisión.}
+\caption{Efectos principales de la regresión logística expresados como factores multiplicativos sobre la probabilidad de readmisión, con intervalos de confianza al 95\,\%.}
 \label{fig:or}
 \end{figure}
 
-El predictor más importante fue el historial de admisiones previas: cada ingreso adicional aumenta la probabilidad de readmisión por un factor cercano a 1.40 (es decir, alrededor de 40\,\% más alta que la de un paciente comparable sin ese antecedente). Las visitas previas a urgencias y el uso de medicamento para diabetes también resultaron relevantes. En conjunto, los pacientes con mayor historia de uso hospitalario presentan un mayor riesgo de readmisión temprana.
+Los efectos más relevantes (Tabla \ref{tab:or}) fueron:
+
+\begin{table}[H]
+\centering
+\caption{Factores asociados con la readmisión a 30 días (todos con $p < 0.01$)}
+\label{tab:or}
+\begin{tabular}{lcc}
+\toprule
+Variable & Factor multiplicativo & IC 95\,\% \\
+\midrule
+Admisiones previas (cada una) & 1.40 & [1.36, 1.46] \\
+Uso de medicamento para diabetes & 1.21 & [1.11, 1.32] \\
+Visitas previas a urgencias & 1.07 & [1.03, 1.12] \\
+Días de estancia (cada uno)   & 1.04 & [1.03, 1.06] \\
+Número de diagnósticos (cada uno) & 1.04 & [1.02, 1.06] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El predictor más importante es el historial de admisiones previas: cada ingreso adicional aumenta la probabilidad de readmisión por un factor cercano a 1.40 (alrededor de 40\,\% más alta que la de un paciente comparable sin ese antecedente). En conjunto, los pacientes con mayor historia de uso hospitalario presentan un mayor riesgo de readmisión temprana.
 
 \subsection{Recurrencia hospitalaria}
 
@@ -150,7 +201,16 @@ Binomial Negativa & 64,529.27 & 1.06 & 0.065 \\
 \end{tabular}
 \end{table}
 
-La Binomial Negativa obtuvo un AIC sustancialmente menor, lo que confirma que la recurrencia presenta sobredispersión: un subconjunto de pacientes concentra una fracción desproporcionada del uso hospitalario. La variable con mayor capacidad explicativa fue el uso previo de urgencias, lo que ofrece un criterio operativo claro para identificar estos pacientes antes del alta.
+La Binomial Negativa obtuvo un AIC sustancialmente menor ($\Delta\text{AIC} \approx 8{,}688$ a favor de la Binomial Negativa), lo que confirma que la recurrencia presenta sobredispersión (Figura \ref{fig:aic}): un subconjunto de pacientes concentra una fracción desproporcionada del uso hospitalario.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{figuras/fig7_aic_poisson_nb.png}
+\caption{Distribución observada de admisiones previas (escala logarítmica) y comparación de AIC entre los modelos Poisson y Binomial Negativa.}
+\label{fig:aic}
+\end{figure}
+
+Los efectos más fuertes (leídos como \textit{incidence rate ratios}, IRR) fueron las visitas previas a urgencias (IRR $= 1.77$), el uso de medicamento para diabetes (IRR $= 1.24$) y las visitas ambulatorias previas (IRR $= 1.13$). Una visita adicional a urgencias multiplica el conteo esperado de admisiones por 1.77; este resultado ofrece un criterio operativo claro para identificar estos pacientes antes del alta.
 
 \subsection{Duración de la estancia}
 
@@ -163,7 +223,7 @@ Para la duración de estancia se usó un modelo Gamma con enlace logarítmico. L
 \label{fig:gamma}
 \end{figure}
 
-El modelo indica que un mayor número de procedimientos y diagnósticos, así como ciertas categorías diagnósticas, se asocian con estancias más prolongadas. En conjunto, la complejidad clínica del paciente es el factor principal que determina la duración esperada de la hospitalización.
+El modelo Gamma alcanzó un pseudo $R^2$ basado en devianza de 0.28, un valor satisfactorio para datos clínicos administrativos. Tomando como referencia la categoría diagnóstica circulatoria (eliminada como base por la codificación con \textit{drop\_first}), las estancias en categorías como ``Otros'' (factor 1.34), Neoplasmas (1.29) y Diabetes (1.24) tienden a ser más prolongadas. Cada diagnóstico adicional incrementa la estancia esperada en aproximadamente 3\,\%, y cada admisión previa en alrededor de 3\,\%. En conjunto, la complejidad clínica del paciente es el factor principal que determina la duración esperada de la hospitalización.
 
 \section{Recomendaciones}
 
@@ -188,5 +248,16 @@ Trabajar con un único registro por paciente mejora la independencia de las obse
 La readmisión, la recurrencia y la duración de la estancia comparten señales comunes de complejidad clínica y uso previo del sistema, aunque no constituyen el mismo fenómeno. Por ello se utilizaron herramientas distintas: regresión logística para readmisión, modelos de conteo para recurrencia y un modelo Gamma para la estancia.
 
 La conclusión central es que los pacientes con mayor historia de uso hospitalario y mayor complejidad clínica concentran buena parte del riesgo operativo. Su identificación temprana puede contribuir a reducir readmisiones, optimizar la planeación de camas y mejorar el seguimiento posterior al alta.
+
+\section*{Referencias}
+
+\begin{enumerate}[label={[\arabic*]}]
+    \item Strack, B., DeShazo, J. P., Gennings, C., Olmo, J. L., Ventura, S., Cios, K. J., y Clore, J. N. (2014). \textit{Impact of HbA1c measurement on hospital readmission rates: analysis of 70,000 clinical database patient records}. BioMed Research International, 2014, 781670.
+    \item Cameron, A. C. y Trivedi, P. K. (2013). \textit{Regression Analysis of Count Data}, 2.\textsuperscript{a} ed. Cambridge University Press.
+    \item McCullagh, P. y Nelder, J. A. (1989). \textit{Generalized Linear Models}, 2.\textsuperscript{a} ed. Chapman \& Hall/CRC.
+    \item Agency for Healthcare Research and Quality (AHRQ). \textit{Clinical Classifications Software (CCS) for ICD-9-CM}. Disponible en: \texttt{hcup-us.ahrq.gov}.
+    \item Akaike, H. (1974). \textit{A new look at the statistical model identification}. IEEE Transactions on Automatic Control, 19(6), 716--723.
+    \item Seabold, S. y Perktold, J. (2010). \textit{Statsmodels: Econometric and statistical modeling with Python}. Proceedings of the 9th Python in Science Conference.
+\end{enumerate}
 
 \end{document}
