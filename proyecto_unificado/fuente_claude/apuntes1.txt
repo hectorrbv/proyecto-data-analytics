@@ -1,0 +1,124 @@
+# Documento: MICE (Multivariate Imputation by Chained Equations)
+
+## 1. Conceptos Fundamentales
+MICE es un método robusto e informativo para manejar datos faltantes en conjuntos de datos multivariados. A diferencia de la imputación simple (como la media), MICE preserva las relaciones entre variables.
+
+### Supuestos de Datos Faltantes
+* **MCAR (Missing Completely at Random):** La probabilidad de que un dato falte es totalmente aleatoria y no depende de ninguna variable.
+* **MAR (Missing at Random):** La probabilidad de que un dato falte depende de otras variables observadas en el dataset, pero no del valor del dato faltante en sí mismo. MICE opera bajo este supuesto.
+* **MNAR (Missing Not at Random):** El hecho de que falte el dato depende del valor que falta (ej. personas con ingresos muy altos no los reportan). Es el escenario más difícil.
+
+## 2. El Proceso de Iteración (Chained Equations)
+MICE no imputa todo a la vez, sino que utiliza un proceso iterativo:
+1. **Imputación Inicial:** Se rellenan los valores faltantes con una técnica simple (como la media) de forma temporal.
+2. **Ciclo de Regresión:** Para cada variable con datos faltantes ($Y$):
+   * Se "vacían" los valores que originalmente eran faltantes en $Y$.
+   * Se entrena un modelo de regresión donde $Y$ es la variable objetivo y las demás variables son las predictoras ($X$).
+   * Se predicen los valores faltantes de $Y$ usando este modelo.
+3. **Actualización:** Se repite este proceso para todas las variables del dataset.
+4. **Convergencia:** El ciclo se repite (generalmente de 5 a 10 veces) hasta que las distribuciones de los valores imputados se estabilizan.
+
+## 3. Ventajas Técnicas
+* Maneja diferentes tipos de datos (continuos, binarios, categóricos) usando diferentes modelos (regresión lineal, logística, etc.) en cada paso.
+* Mantiene la varianza y la correlación entre variables, evitando sesgos comunes en la imputación simple.
+
+***
+
+# Documento: Pruebas Estadísticas para EDA e Inferencia
+
+Este resumen organiza las pruebas necesarias para validar supuestos y comparar grupos, alineado con la sección de "Inferencia Estadística" de tu proyecto.
+
+## 1. Pruebas de Normalidad
+Indispensables para decidir si usar pruebas paramétricas o no paramétricas.
+
+| Prueba | Caso de Uso | Hipótesis Nula ($H_0$) |
+| :--- | :--- | :--- |
+| **Shapiro-Wilk** | Muestras pequeñas ($n < 50$). Muy sensible. | Los datos siguen una distribución normal. |
+| **Kolmogorov-Smirnov (K-S)** | Muestras grandes. Compara la distribución empírica con la teórica. | Los datos siguen una distribución normal. |
+| **D’Agostino’s $K^2$** | Basada en curtosis y asimetría. | Los datos siguen una distribución normal. |
+
+## 2. Comparación de Grupos (Variables Numéricas)
+
+### Caso: 2 Grupos
+* **Prueba t de Student (Paramétrica):** Se usa para comparar medias si los datos son normales y tienen varianzas similares (homocedasticidad).
+* **U de Mann-Whitney (No Paramétrica):** Se usa para comparar medianas si los datos no son normales. Es la alternativa robusta a la prueba t.
+
+### Caso: > 2 Grupos
+* **ANOVA (Paramétrica):** Compara las medias de tres o más grupos. Requiere normalidad y varianzas iguales.
+* **Kruskal-Wallis (No Paramétrica):** Compara las medianas de tres o más grupos. Se usa cuando no se cumple la normalidad del ANOVA.
+
+## 3. Relación entre Variables Categóricas
+* **Chi-Cuadrado ($\chi^2$) de Independencia:** Determina si existe una asociación significativa entre dos variables categóricas (ej. Género y Readmisión).
+* **Prueba Exacta de Fisher:** Alternativa a $\chi^2$ cuando las frecuencias esperadas en la tabla de contingencia son muy bajas (menores a 5).
+
+## 4. Homocedasticidad (Igualdad de Varianzas)
+* **Prueba de Levene:** Evalúa si las varianzas son iguales entre grupos. Si $p < 0.05$, las varianzas son diferentes, lo que invalida una prueba t estándar o un ANOVA tradicional.
+
+***
+
+# Documento: Distribuciones de Probabilidad
+
+Este bloque es crítico para tu análisis de la duración de estancias (que suele seguir una distribución Gamma o Lognormal) y la recurrencia de admisiones (que suele ser Poisson o Binomial Negativa).
+
+## 1. Distribuciones Discretas (Conteo de eventos)
+* **Distribución de Bernoulli:** Modela un solo experimento con dos resultados (éxito/fracaso). Útil para la probabilidad individual de una readmisión inmediata.
+* **Distribución Binomial:** Describe el número de éxitos en $n$ ensayos independientes. 
+* **Distribución de Poisson:** Modela el número de veces que ocurre un evento en un intervalo determinado de tiempo o espacio.
+    * **Propiedad clave:** La media ($\lambda$) es igual a la varianza.
+    * **Uso en el proyecto:** Modelar el "número de ingresos previos" (`number_inpatient`).
+* **Distribución Binomial Negativa:** Se utiliza cuando los datos de conteo presentan **sobredispersión** (la varianza es mayor que la media), un fenómeno común en datos hospitalarios donde algunos pacientes son "frecuentadores" extremos.
+
+## 2. Distribuciones Continuas (Mediciones de tiempo)
+* **Distribución Normal (Gaussiana):** Definida por su media ($\mu$) y desviación estándar ($\sigma$). Es la base de muchas pruebas estadísticas, aunque rara vez se ajusta perfectamente a las estancias hospitalarias debido a la asimetría.
+* **Distribución Exponencial:** Modela el tiempo entre eventos. Tiene la propiedad de "falta de memoria".
+* **Distribución Gamma:** Muy flexible; se utiliza para modelar variables que son siempre positivas y tienen asimetría hacia la derecha. 
+    * **Uso en el proyecto:** Ideal para modelar `time_in_hospital` (días de estancia).
+
+***
+
+# Documento: Inferencia Estadística Paramétrica
+
+## 1. Estimación por Intervalos
+Permite calcular un rango de valores (Intervalo de Confianza) donde es probable que se encuentre el parámetro poblacional (como la media real de estancia de todos los pacientes diabéticos).
+* **IC para la Media:** Depende del tamaño de la muestra y de si se conoce la varianza poblacional ($z$ vs $t$).
+
+## 2. Pruebas de Hipótesis (Fundamentos)
+* **Hipótesis Nula ($H_0$):** Representa el "status quo" o la ausencia de efecto (ej. "No hay diferencia en el riesgo de readmisión entre hombres y mujeres").
+* **Hipótesis Alternativa ($H_1$):** Lo que se desea probar (ej. "Existe una diferencia significativa").
+* **P-valor:** Probabilidad de observar los resultados actuales (o más extremos) si $H_0$ fuera cierta. Si $p < \alpha$ (usualmente $0.05$), se rechaza $H_0$.
+
+## 3. Errores en la Inferencia
+* **Error Tipo I ($\alpha$):** Rechazar $H_0$ cuando es verdadera (Falso Positivo).
+* **Error Tipo II ($\beta$):** No rechazar $H_0$ cuando es falsa (Falso Negativo).
+
+***
+
+# Documento: Modelos de Clasificación y Regresión
+
+## 1. K-Nearest Neighbors (KNN)
+Es un algoritmo supervisado, no paramétrico y basado en instancias, utilizado principalmente para tareas de clasificación. Su premisa central es predecir basándose en la proximidad espacial o similitud de los datos.
+
+* **Mecanismo de acción:** Para predecir la clase de un nuevo registro, el modelo calcula la distancia (usualmente la distancia Euclidiana o Manhattan) entre la nueva observación y todos los datos de entrenamiento. Posteriormente, selecciona los $K$ puntos más cercanos.
+* **Clasificación:** La clase del nuevo punto se determina por la mayoría de votos entre sus $K$ vecinos.
+* **El impacto del parámetro $K$:**
+    * Un valor de $K$ muy bajo (ej. $K=1$) genera fronteras de decisión complejas, capturando ruido y aumentando el riesgo de *overfitting* (sobreajuste).
+    * Un valor de $K$ alto crea fronteras más suaves y generalizables, pero puede caer en *underfitting* al ignorar patrones locales importantes.
+* **Preprocesamiento crítico:** Dado que el algoritmo es sensible a las magnitudes, es estrictamente obligatorio **estandarizar o normalizar** los datos numéricos antes de entrenar, evitando que las variables con escalas mayores dominen el cálculo de distancias.
+
+## 2. Support Vector Machines (SVM)
+Es un modelo robusto y altamente efectivo en espacios de alta dimensionalidad, diseñado para clasificación y regresión. 
+
+* **Concepto Principal:** SVM busca encontrar la frontera de decisión geométrica óptima (hiperplano) que logre separar las distintas categorías maximizando el "margen" de separación entre ellas. Las observaciones que quedan en el límite de este margen se conocen como **vectores de soporte**.
+* **Manejo de datos no lineales:** Cuando los grupos no se pueden separar con una línea recta, el modelo aplica el *kernel trick* (truco del kernel). Esta técnica matemática proyecta temporalmente los datos a dimensiones superiores donde sí puedan ser divididos mediante un plano plano, sin disparar el costo computacional.
+* **Tipos de Kernel comunes:** Lineal (para relaciones simples), Polinomial y RBF (Radial Basis Function, ideal para agrupar datos según su similitud espacial).
+* **Ajuste de hiperparámetros:**
+    * **El parámetro $C$:** Controla la penalización por observaciones mal clasificadas. Un $C$ alto fuerza un margen estricto (buscando cero errores en entrenamiento), mientras que un $C$ bajo crea un margen más blando y generalizable.
+    * **El parámetro $\gamma$ (Gamma):** Específico de kernels como el RBF, dicta el radio de influencia de un solo vector de soporte. Un $\gamma$ bajo abarca toda la distribución de forma global, mientras que un $\gamma$ alto concentra la influencia creando fronteras ajustadas a nivel local.
+
+## 3. Regresión Logística
+A pesar de su nombre, es el modelo estándar y fundamental para problemas de **clasificación binaria** (ej. determinar las probabilidades de readmitido vs. no readmitido).
+
+* **Función Sigmoide:** El algoritmo toma una combinación lineal de las variables predictoras y las pasa por una curva logística (sigmoide), transformando el resultado continuo en un valor de probabilidad estrictamente limitado entre 0 y 1.
+* **Interpretabilidad clínica:** Es altamente valorado en el ámbito médico y de negocios porque permite interpretar el peso de cada coeficiente. Esto ayuda a explicar cuánto incrementa o disminuye el riesgo de readmisión por cada cambio en una variable clínica.
+
+***

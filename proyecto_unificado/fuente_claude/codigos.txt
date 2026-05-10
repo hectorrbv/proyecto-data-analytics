@@ -1,0 +1,1208 @@
+# =============================================================================
+# DATA ANALYTICS — CÓDIGO UNIFICADO
+# Combina: Python-101, distributions, 01-DA-Lab, 01-DA-Lab-Data-Transformation,
+#          02-DA-Lab, 03-DA-Lab, bootstrapping, eda, inference
+# =============================================================================
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import matplotlib.patches as patches
+
+from scipy import stats
+from scipy.stats import skewnorm, zscore, skew, kurtosis
+from scipy.special import rel_entr
+from scipy.stats.mstats import winsorize
+
+from sklearn.preprocessing import (StandardScaler, MinMaxScaler, RobustScaler,
+                                   OneHotEncoder, LabelEncoder, OrdinalEncoder,
+                                   PolynomialFeatures, QuantileTransformer,
+                                   PowerTransformer, KBinsDiscretizer)
+from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import IsolationForest, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.datasets import fetch_california_housing
+from statsmodels.stats.weightstats import ttest_ind
+
+import warnings
+warnings.filterwarnings("ignore")
+
+np.random.seed(42)
+rng = np.random.default_rng(42)
+
+colors = ["midnightblue", "steelblue", "dodgerblue", "lightseagreen", "seagreen", "darkseagreen"]
+palette = sns.color_palette(colors)
+colors_map = {'usa': "#0A3161", 'europe': "#0555f5", 'japan': "#BC002D"}
+
+
+# =============================================================================
+# FUNCTIONALITY — Funciones reutilizables de visualización EDA
+# =============================================================================
+
+def plot_variable_analysis(df, variable, category="origin", palette=None):
+    """4-panel diagnostic: histograma+KDE, Q-Q plot, boxplot, barplot de media por categoría."""
+    if palette is None:
+        palette = sns.color_palette(colors)
+
+    numeric_data = df[variable].dropna()
+    categories = df[category].dropna().unique() if category in df.columns else []
+
+    fig, ax = plt.subplots(1, 4, figsize=(22, 5))
+
+    # Panel 1: Histograma + KDE por categoría
+    for cat in categories:
+        subset = df[df[category] == cat][variable].dropna()
+        sns.histplot(x=subset, bins=20, stat="density", linewidth=0,
+                     color=palette.get(cat, colors[0]) if isinstance(palette, dict) else colors[0],
+                     alpha=0.4, ax=ax[0])
+        sns.kdeplot(x=subset,
+                    color=palette.get(cat, colors[0]) if isinstance(palette, dict) else colors[0],
+                    label=cat, ax=ax[0])
+    ax[0].set_title(f"Distribution: {variable}")
+    ax[0].legend(title=category)
+
+    # Panel 2: Q-Q Plot
+    (osm, osr), (slope, intercept, r) = stats.probplot(numeric_data, dist="norm")
+    ax[1].scatter(osm, osr, alpha=0.5, color=colors[1], s=15)
+    ax[1].plot(osm, slope * np.array(osm) + intercept, color="black", lw=1)
+    ax[1].set_title("Q-Q Plot (Normal)")
+    ax[1].set_xlabel("Theoretical Quantiles")
+    ax[1].set_ylabel("Sample Quantiles")
+
+    # Panel 3: Boxplot por categoría
+    cat_order = sorted(df[category].dropna().unique()) if category in df.columns else None
+    sns.boxplot(data=df, x=category, y=variable, order=cat_order,
+                palette=palette if isinstance(palette, dict) else colors[:len(categories)],
+                ax=ax[2])
+    ax[2].set_title(f"Boxplot by {category}")
+
+    # Panel 4: Mean ± Std por categoría
+    group_stats = df.groupby(category)[variable].agg(['mean', 'std']).reset_index()
+    bar_colors = [palette.get(c, colors[i]) if isinstance(palette, dict) else colors[i]
+                  for i, c in enumerate(group_stats[category])]
+    ax[3].bar(group_stats[category], group_stats['mean'], color=bar_colors, alpha=0.8)
+    ax[3].errorbar(group_stats[category], group_stats['mean'], yerr=group_stats['std'],
+                   fmt='none', color='black', capsize=5)
+    ax[3].set_title(f"Mean ± Std by {category}")
+
+    plt.suptitle(f"Variable Analysis: {variable.upper()}", fontsize=13, fontweight='bold')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_ecdf_variable_analysis(df, variables, category="origin", palette=None):
+    """eCDF por variable, coloreado por categoría."""
+    if palette is None:
+        palette = sns.color_palette(colors)
+
+    fig, ax = plt.subplots(1, len(variables), figsize=(7 * len(variables), 5))
+    if len(variables) == 1:
+        ax = [ax]
+
+    for idx, var in enumerate(variables):
+        for cat in df[category].dropna().unique():
+            subset = df[df[category] == cat][var].dropna().sort_values()
+            ecdf = np.arange(1, len(subset) + 1) / len(subset)
+            cat_color = palette.get(cat, colors[idx]) if isinstance(palette, dict) else colors[idx]
+            ax[idx].plot(subset, ecdf, label=cat, color=cat_color, lw=2)
+        ax[idx].set_title(f"eCDF: {var}")
+        ax[idx].set_xlabel(var)
+        ax[idx].set_ylabel("Cumulative Probability")
+        ax[idx].legend(title=category)
+        ax[idx].grid(alpha=0.4)
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_correlation_heatmap(df):
+    """Tres mapas de calor de correlación: Pearson, Spearman y Kendall."""
+    numeric_df = df.select_dtypes(include=np.number)
+    methods = ['pearson', 'spearman', 'kendall']
+
+    fig, ax = plt.subplots(1, 3, figsize=(20, 6))
+
+    for i, method in enumerate(methods):
+        corr = numeric_df.corr(method=method)
+        mask = np.triu(np.ones_like(corr, dtype=bool))
+        sns.heatmap(corr, mask=mask, annot=True, fmt=".2f", cmap="coolwarm",
+                    center=0, vmin=-1, vmax=1, ax=ax[i], cbar=i == 2)
+        ax[i].set_title(f"{method.capitalize()} Correlation")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_bivariate_analysis(df, x, y, category="origin", palette=None,
+                            plot_reg=True, truncate=True, log_x=False, log_y=False,
+                            split_category=False, size_var=None, ci=95):
+    """Scatter + regresión para dos variables continuas, con opciones de transformación y split."""
+    if palette is None:
+        palette = sns.color_palette(colors)
+
+    df_plot = df.copy()
+    x_label, y_label = x, y
+
+    if log_x:
+        df_plot[x] = np.log(df_plot[x].replace(0, np.nan))
+        x_label = f"log({x})"
+    if log_y:
+        df_plot[y] = np.log(df_plot[y].replace(0, np.nan))
+        y_label = f"log({y})"
+
+    categories = df_plot[category].dropna().unique() if not split_category else df_plot[category].dropna().unique()
+    n_cols = len(categories) if split_category else 1
+    fig, axes = plt.subplots(1, n_cols, figsize=(8 * n_cols, 5), sharey=True)
+    if n_cols == 1:
+        axes = [axes]
+
+    for i, cat in enumerate((categories if split_category else [None])):
+        data_subset = df_plot[df_plot[category] == cat] if split_category else df_plot
+        ax = axes[i]
+
+        size_kws = {'size': size_var, 'sizes': {3: 10, 4: 30, 5: 60, 6: 90, 8: 130}} if size_var else {}
+
+        sns.scatterplot(data=data_subset, x=x, y=y,
+                        hue=category, palette=palette,
+                        alpha=0.5, edgecolor=None, ax=ax, **size_kws)
+
+        if plot_reg:
+            for cat_inner in (data_subset[category].unique() if not split_category else [cat]):
+                sub = data_subset[data_subset[category] == cat_inner]
+                c = palette.get(cat_inner, 'black') if isinstance(palette, dict) else 'black'
+                sns.regplot(data=sub, x=x, y=y, scatter=False, truncate=truncate,
+                            ci=ci, color=c, ax=ax)
+
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(f"{y_label} vs {x_label}" + (f" ({cat})" if split_category else ""))
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_categorical_bivariate_analysis(df, x, y, category="origin", palette=None):
+    """Barplot + boxplot para variable discreta vs continua."""
+    if palette is None:
+        palette = sns.color_palette(colors)
+
+    fig, ax = plt.subplots(1, 2, figsize=(16, 5))
+
+    sns.barplot(data=df, x=x, y=y, hue=category, palette=palette,
+                estimator="mean", errorbar=("ci", 95), ax=ax[0])
+    ax[0].set_title(f"Mean {y} by {x} (grouped by {category})")
+
+    sns.boxplot(data=df, x=x, y=y, hue=category, palette=palette, ax=ax[1])
+    ax[1].set_title(f"Boxplot {y} by {x} (grouped by {category})")
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 1: DISTRIBUCIONES DE PROBABILIDAD
+# =============================================================================
+
+def section_distributions():
+    dist_colors = ['#22574A', '#D8E4BC', '#8f9779']
+    plt.style.use('seaborn-v0_8-whitegrid')
+
+    # --- Discretas ---
+
+    # Bernoulli
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    for i, p in enumerate([0.1, 0.5, 0.9]):
+        probabilities = stats.bernoulli.pmf([0, 1], p)
+        axes[i].bar([0, 1], probabilities, color=dist_colors[i], alpha=0.8)
+        axes[i].set_xticks([0, 1])
+        axes[i].set_xticklabels(['Failure (0)', 'Success (1)'])
+        axes[i].set_ylim(0, 1)
+        axes[i].set_title(f'Bernoulli (p={p:.2f})')
+        axes[i].set_ylabel('Probability')
+        axes[i].grid(alpha=0.75, lw=1)
+    fig.tight_layout()
+    plt.show()
+
+    # Binomial
+    n = 20
+    x = np.arange(0, n + 1)
+    plt.figure(figsize=(10, 5))
+    max_prob = 0
+    for i, p in enumerate([0.2, 0.5, 0.8]):
+        probs = stats.binom.pmf(x, n, p)
+        max_prob = max(max_prob, probs.max())
+        plt.plot(x, probs, 'o-', label=f'n={n}, p={p:.2f}', color=dist_colors[i], lw=2)
+    plt.title('Binomial Distribution Shapes')
+    plt.xlabel('Number of Successes')
+    plt.ylabel('Probability')
+    plt.ylim(0, max_prob * 1.15)
+    plt.xlim(0, n)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Poisson
+    lambdas = [1, 4, 10]
+    upper = int(np.ceil(max(lambdas) + 4 * np.sqrt(max(lambdas))))
+    x = np.arange(0, upper + 1)
+    plt.figure(figsize=(10, 5))
+    max_prob = 0
+    for i, lam in enumerate(lambdas):
+        probs = stats.poisson.pmf(x, lam)
+        max_prob = max(max_prob, probs.max())
+        plt.plot(x, probs, 'o-', label=f'λ={lam}', color=dist_colors[i], lw=2)
+    plt.title('Poisson Distribution Shapes')
+    plt.xlabel('Number of Events')
+    plt.ylabel('Probability')
+    plt.ylim(0, max_prob * 1.15)
+    plt.xlim(0, upper)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # --- Continuas ---
+
+    # Normal
+    params_normal = [(0.0, 1.0), (0.0, 2.0), (5.0, 1.0)]
+    x_min = min(mu - 4 * sigma for mu, sigma in params_normal)
+    x_max = max(mu + 4 * sigma for mu, sigma in params_normal)
+    x = np.linspace(x_min, x_max, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, (mu, sigma) in enumerate(params_normal):
+        d = stats.norm.pdf(x, mu, sigma)
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'μ={mu:.1f}, σ={sigma:.1f}', color=dist_colors[i], lw=2)
+    plt.title('Normal Distribution Shapes')
+    plt.xlabel('Value')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(x_min, x_max)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Exponential
+    lambdas_exp = [0.5, 1.0, 2.0]
+    x_max_exp = 6 / min(lambdas_exp)
+    x = np.linspace(0, x_max_exp, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, lam in enumerate(lambdas_exp):
+        d = stats.expon.pdf(x, scale=1 / lam)
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'λ={lam:.1f} (scale={1/lam:.2f})', color=dist_colors[i], lw=2)
+    plt.title('Exponential Distribution Shapes')
+    plt.xlabel('Time / Distance')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(0, x_max_exp)
+    plt.axvline(0, color='black', linestyle='--', alpha=0.7, lw=1)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Gamma
+    params_gamma = [(1, 2.0), (2, 2.0), (5, 1.0)]
+    x_max_g = max(float(stats.gamma.ppf(0.995, a=k, scale=theta)) for k, theta in params_gamma)
+    x = np.linspace(0, x_max_g, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, (k, theta) in enumerate(params_gamma):
+        d = stats.gamma.pdf(x, a=k, scale=theta)
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'k={k}, θ={theta:.1f}', color=dist_colors[i], lw=2)
+    plt.title('Gamma Distribution Shapes')
+    plt.xlabel('Value')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(0, x_max_g)
+    plt.axvline(0, color='black', linestyle='--', alpha=0.7, lw=1)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Log-Normal
+    params_lognorm = [(0.0, 0.25), (0.0, 0.5), (0.0, 1.0)]
+    x_max_ln = max(float(stats.lognorm.ppf(0.995, s=sigma, scale=np.exp(mu)))
+                   for mu, sigma in params_lognorm)
+    x = np.linspace(0.001, x_max_ln, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, (mu, sigma) in enumerate(params_lognorm):
+        d = stats.lognorm.pdf(x, s=sigma, scale=np.exp(mu))
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'μ={mu:.1f}, σ={sigma:.2f}', color=dist_colors[i], lw=2)
+    plt.title('Log-Normal Distribution Shapes')
+    plt.xlabel('Value')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(0, x_max_ln)
+    plt.axvline(0, color='black', linestyle='--', alpha=0.7, lw=1)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Student's t
+    dfs_t = [2, 5, 30]
+    x = np.linspace(-6, 6, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, df in enumerate(dfs_t):
+        d = stats.t.pdf(x, df)
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'df={df}', color=dist_colors[i], lw=2)
+    plt.title("Student's t-Distribution Shapes")
+    plt.xlabel('Value')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(-6, 6)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Chi-Square
+    dfs_chi = [2, 5, 12]
+    x_max_chi = max(float(stats.chi2.ppf(0.995, df)) for df in dfs_chi)
+    x = np.linspace(0, x_max_chi, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, df in enumerate(dfs_chi):
+        d = stats.chi2.pdf(x, df)
+        max_dens = max(max_dens, d.max())
+        plt.plot(x, d, label=f'df={df}', color=dist_colors[i], lw=2)
+    plt.title('Chi-Square Distribution Shapes')
+    plt.xlabel('Value')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(0, x_max_chi)
+    plt.axvline(0, color='black', linestyle='--', alpha=0.7, lw=1)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+    # Beta
+    params_beta = [(2.0, 2.0), (2.0, 5.0), (0.5, 0.5)]
+    x = np.linspace(0.001, 0.999, 500)
+    plt.figure(figsize=(10, 5))
+    max_dens = 0
+    for i, (alpha, beta) in enumerate(params_beta):
+        d = stats.beta.pdf(x, alpha, beta)
+        max_dens = max(max_dens, np.nanmax(d))
+        plt.plot(x, d, label=f'α={alpha:.1f}, β={beta:.1f}', color=dist_colors[i], lw=2)
+    plt.title('Beta Distribution Shapes')
+    plt.xlabel('Probability')
+    plt.ylabel('Density')
+    plt.ylim(0, max_dens * 1.15)
+    plt.xlim(0, 1)
+    plt.grid(alpha=0.75, lw=1)
+    plt.legend()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 2: TRANSFORMACIONES DE DATOS
+# =============================================================================
+
+def section_data_transformation():
+    rng_local = np.random.default_rng(42)
+    N = 5000
+
+    # 2.1 Transformaciones simples sobre distribuciones simétricas/asimétricas
+    raw = pd.DataFrame({
+        'Exponential (Decay)': rng_local.exponential(scale=2, size=N),
+        'Gamma (Humped)':      rng_local.gamma(shape=2.5, scale=2, size=N),
+        'Lognormal (Moderate)':rng_local.lognormal(mean=1.5, sigma=0.5, size=N),
+        'Lognormal (Heavy Tail)': rng_local.lognormal(mean=1.5, sigma=1.2, size=N)
+    })
+
+    transformations = [
+        ("Original",       lambda x: x),
+        ("Square Root",    np.sqrt),
+        ("Log Base 10",    np.log10),
+        ("Reciprocal (1/x)", lambda x: 1 / x)
+    ]
+
+    transform_colors = ["midnightblue", "steelblue", "dodgerblue", "lightseagreen"]
+    fig, ax = plt.subplots(len(raw.columns), len(transformations), figsize=(18, 8))
+
+    for row_idx, (col_name, data) in enumerate(raw.items()):
+        for col_idx, (trans_name, func) in enumerate(transformations):
+            transformed_data = func(data)
+            sns.histplot(x=transformed_data, bins=30, stat="density", linewidth=0,
+                         color=transform_colors[col_idx], alpha=0.6, ax=ax[row_idx, col_idx])
+            ax[row_idx, col_idx].set_ylabel("")
+            ax[row_idx, col_idx].set_xlabel("")
+            ax[row_idx, col_idx].xaxis.set_major_locator(ticker.MaxNLocator(4))
+            ax[row_idx, col_idx].set_yticks([])
+            if col_idx == 0:
+                ax[row_idx, col_idx].set_ylabel(col_name, fontsize=10)
+            if row_idx == 0:
+                ax[row_idx, col_idx].set_title(trans_name, fontsize=10)
+
+    plt.tight_layout()
+    plt.show()
+
+    # 2.2 Efecto en relación Y ~ log(X)
+    x_gamma = raw['Gamma (Humped)']
+    noise = rng_local.normal(0, 1.0, size=N)
+    y = 5 * np.log10(x_gamma) + noise
+
+    fig, ax = plt.subplots(1, 4, figsize=(20, 5))
+    check_transforms = [
+        ("Original (x)",  x_gamma),
+        ("Square Root",   np.sqrt(x_gamma)),
+        ("Log Base 10",   np.log10(x_gamma)),
+        ("Reciprocal",    1 / x_gamma)
+    ]
+    for i, (name, x_trans) in enumerate(check_transforms):
+        sns.scatterplot(x=x_trans, y=y, ax=ax[i], alpha=0.5, color=transform_colors[i], s=10, edgecolor=None)
+        sns.regplot(x=x_trans, y=y, ax=ax[i], scatter=False, color="black", line_kws={"linewidth": 1})
+        ax[i].set_title(f"y vs. {name}", fontsize=12, fontweight='bold')
+        ax[i].set_ylabel("Target y")
+    plt.suptitle("Linearizing the Relationship (True Relation: y ~ log(x))", fontsize=16)
+    plt.tight_layout()
+    plt.show()
+
+    # 2.3 Transformaciones avanzadas: Box-Cox, Yeo-Johnson, Winsorización, Binning
+    data_map = {
+        "Right Skewed": rng_local.lognormal(mean=0.5, sigma=0.8, size=N),
+        "Left Skewed":  rng_local.beta(a=15, b=2, size=N) * 10,
+        "Bimodal":      np.concatenate([rng_local.normal(2, 1, N // 2), rng_local.normal(8, 1.5, N // 2)])
+    }
+
+    fig, ax = plt.subplots(3, 5, figsize=(20, 10))
+    cols = ["Original", "Box-Cox", "Yeo-Johnson", "Winsorization (5-95%)", "Binning (Uniform)"]
+
+    for row_idx, (name, x) in enumerate(data_map.items()):
+        try:
+            x_box = PowerTransformer(method='box-cox').fit_transform(x.reshape(-1, 1)).flatten()
+        except ValueError:
+            x_box = np.full_like(x, np.nan)
+
+        x_yeo = PowerTransformer(method='yeo-johnson').fit_transform(x.reshape(-1, 1)).flatten()
+        x_win = winsorize(x, limits=[0.05, 0.05])
+        x_bin = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='uniform').fit_transform(
+            x.reshape(-1, 1)).flatten()
+
+        for col_idx, trans_data in enumerate([x, x_box, x_yeo, x_win, x_bin]):
+            if np.isnan(trans_data).all():
+                ax[row_idx, col_idx].text(0.5, 0.5, "Invalid\n(Needs x>0)",
+                                          ha='center', va='center', fontsize=12, color='red')
+                continue
+            sns.histplot(x=trans_data, bins=30, stat="density", linewidth=0,
+                         color=transform_colors[col_idx % len(transform_colors)], alpha=0.6,
+                         ax=ax[row_idx, col_idx])
+            ax[row_idx, col_idx].set_ylabel("")
+            ax[row_idx, col_idx].set_xlabel("")
+            ax[row_idx, col_idx].set_yticks([])
+            ax[row_idx, col_idx].xaxis.set_major_locator(ticker.MaxNLocator(4))
+            if row_idx == 0:
+                ax[row_idx, col_idx].set_title(cols[col_idx], fontsize=12)
+            if col_idx == 0:
+                ax[row_idx, col_idx].set_ylabel(name, fontsize=12)
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 3: PREPROCESAMIENTO — VALORES FALTANTES
+# =============================================================================
+
+def section_missing_values():
+
+    # 3.1 Creación de DataFrame con NaN
+    data_missing = {
+        'Feature_A': [10, 20, np.nan, 40, 50, 60, np.nan],
+        'Feature_B': [1.1, np.nan, 3.3, 4.4, 5.5, np.nan, 7.7],
+        'Feature_C': ['X', 'Y', 'X', 'Z', np.nan, 'Y', 'X'],
+        'Numerical_ID': [1, 2, 3, 4, 5, 6, 7]
+    }
+    df_missing = pd.DataFrame(data_missing)
+    print("NaN por columna:\n", df_missing.isnull().sum())
+    print("% NaN:\n", df_missing.isnull().sum() / len(df_missing) * 100)
+
+    # 3.2 Eliminación
+    df_dropped_rows = df_missing.dropna(axis=0)
+    df_dropped_cols = df_missing.dropna(axis=1)
+    print(f"\nFilas originales: {len(df_missing)}, tras drop: {len(df_dropped_rows)}")
+    print(f"Columnas originales: {df_missing.shape[1]}, tras drop: {df_dropped_cols.shape[1]}")
+
+    # dropna(how='all')
+    df_all_nan = df_missing.copy()
+    df_all_nan.loc[len(df_all_nan)] = [np.nan, np.nan, np.nan, np.nan]
+    print(f"\nTras dropna(how='all'): {len(df_all_nan.dropna(how='all'))} filas")
+
+    # 3.3 Imputación simple
+    df_imp = df_missing.copy()
+    df_imp['Feature_A'] = SimpleImputer(strategy='mean').fit_transform(df_imp[['Feature_A']])
+    df_imp['Feature_B'] = SimpleImputer(strategy='median').fit_transform(df_imp[['Feature_B']])
+    df_imp['Feature_C'] = SimpleImputer(strategy='most_frequent').fit_transform(
+        df_imp[['Feature_C']]).squeeze()
+    print("\nTras imputación simple:\n", df_imp)
+
+    # 3.4 KNN Imputation
+    df_knn = df_missing.copy()
+    knn_imputer = KNNImputer(n_neighbors=2)
+    df_knn[['Feature_A', 'Feature_B']] = knn_imputer.fit_transform(
+        df_knn[['Feature_A', 'Feature_B']])
+    print("\nTras KNN Imputation:\n", df_knn)
+
+    # 3.5 Relleno constante
+    df_const = df_missing.copy()
+    df_const['Feature_C'].fillna('Unknown', inplace=True)
+
+    # 3.6 Forward / Backward fill (series temporal)
+    data_ts = {
+        'Timestamp': pd.to_datetime(['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05']),
+        'Sensor_Reading': [10.5, np.nan, 12.1, np.nan, 13.0]
+    }
+    df_ts = pd.DataFrame(data_ts)
+    df_ts_ffill = df_ts.copy()
+    df_ts_ffill['Sensor_Reading'].ffill(inplace=True)
+    df_ts_bfill = df_ts.copy()
+    df_ts_bfill['Sensor_Reading'].bfill(inplace=True)
+    print("\nForward fill:\n", df_ts_ffill)
+    print("Backward fill:\n", df_ts_bfill)
+
+    # 3.7 Mecanismos MCAR / MNAR (visualización)
+    n = 2000
+    X = np.random.normal(10, 2, size=n)
+    Y = 1.5 * X + 5 + np.random.normal(0, 2, size=n)
+    df_complete = pd.DataFrame({'X': X, 'Y': Y})
+
+    df_mcar = df_complete.copy()
+    df_mcar.loc[np.random.rand(n) < 0.4, 'Y'] = np.nan
+
+    df_mnar = df_complete.copy()
+    p_mnar = 1 / (1 + np.exp(-(df_mnar['Y'] - 20)))
+    df_mnar.loc[np.random.rand(n) < p_mnar, 'Y'] = np.nan
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharex=True, sharey=True)
+    for ax, (name, data) in zip(axes, [('MCAR', df_mcar), ('MNAR', df_mnar)]):
+        sns.scatterplot(data=data, x='X', y='Y', alpha=0.3, color='blue', label='Observed', ax=ax)
+        missing_idx = data['Y'].isna()
+        ax.scatter(df_complete.loc[missing_idx, 'X'], df_complete.loc[missing_idx, 'Y'],
+                   alpha=0.2, color='red', label='Missing', s=10)
+        ax.set_title(f"{name} Mechanism")
+        ax.legend()
+    plt.suptitle("Red = datos faltantes. MNAR pierde la parte superior.", y=1.05)
+    plt.show()
+
+    # 3.8 Imputación por grupo (distribución bimodal — alturas)
+    n_per_group = 500
+    men   = np.random.normal(178, 7, n_per_group)
+    women = np.random.normal(163, 6, n_per_group)
+    df_bi = pd.DataFrame({
+        'Height': np.concatenate([men, women]),
+        'Gender': ['M'] * n_per_group + ['F'] * n_per_group
+    })
+    df_bi.loc[np.random.rand(len(df_bi)) < 0.3, 'Height'] = np.nan
+
+    global_mean = df_bi['Height'].mean()
+    df_bi['Imp_Global'] = df_bi['Height'].fillna(global_mean)
+    df_bi['Imp_Group']  = df_bi['Height'].fillna(
+        df_bi.groupby('Gender')['Height'].transform('mean'))
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    sns.kdeplot(data=df_bi, x='Imp_Global', hue='Gender', fill=True, ax=axes[0])
+    axes[0].set_title(f"Global Mean Imputation (Mean={global_mean:.1f})")
+    axes[0].annotate('Global Mean lands in the valley!',
+                     xy=(global_mean, 0.04), xytext=(global_mean, 0.08),
+                     arrowprops=dict(facecolor='black', shrink=0.05), ha='center')
+    sns.kdeplot(data=df_bi, x='Imp_Group', hue='Gender', fill=True, ax=axes[1])
+    axes[1].set_title("Group-Specific Mean Imputation")
+    plt.show()
+
+    # 3.9 MICE con sklearn
+    data_housing = fetch_california_housing(as_frame=True).frame
+    df_housing = data_housing.sample(2000, random_state=42).reset_index(drop=True)
+    threshold = df_housing['AveRooms'].quantile(0.70)
+    mask_housing = (df_housing['AveRooms'] > threshold) & (np.random.rand(len(df_housing)) < 0.6)
+    df_corrupt = df_housing.copy()
+    df_corrupt.loc[mask_housing, 'MedInc'] = np.nan
+
+    df_mean_imp = df_corrupt.copy()
+    df_mean_imp['MedInc'] = SimpleImputer().fit_transform(df_mean_imp[['MedInc']])
+
+    df_mice = pd.DataFrame(IterativeImputer(random_state=42).fit_transform(df_corrupt),
+                           columns=df_corrupt.columns)
+
+    df_group = df_corrupt.copy()
+    df_group['RoomsBin'] = pd.qcut(df_group['AveRooms'], q=4)
+    df_group['MedInc'] = df_group['MedInc'].fillna(
+        df_group.groupby('RoomsBin')['MedInc'].transform('mean'))
+    df_group = df_group.drop(columns=['RoomsBin'])
+
+    def evaluate_imputation(df, name):
+        X, y = df.drop(columns=['MedHouseVal']), df['MedHouseVal']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        rmse = np.sqrt(mean_squared_error(
+            y_test,
+            RandomForestRegressor(random_state=42).fit(X_train, y_train).predict(X_test)))
+        print(f"[{name}] RMSE: {rmse:.4f}")
+
+    evaluate_imputation(df_housing, "Original")
+    evaluate_imputation(df_mean_imp, "Mean")
+    evaluate_imputation(df_group, "Group Mean")
+    evaluate_imputation(df_mice, "MICE")
+
+    # 3.10 Corrección MNAR con propensity score (Heckman)
+    def impute_mnar_with_propensity(df_input):
+        df = df_input.copy()
+        df['is_missing'] = df['Y'].isna().astype(int)
+        mech_model = LogisticRegression()
+        mech_model.fit(df[['X']], df['is_missing'])
+        df['propensity'] = mech_model.predict_proba(df[['X']])[:, 1]
+        cols = ['X', 'Y', 'propensity']
+        df_imp = pd.DataFrame(IterativeImputer(random_state=42).fit_transform(df[cols]),
+                              columns=cols)
+        return df_imp['Y']
+
+    df_mnar['Y_Heckman'] = impute_mnar_with_propensity(df_mnar)
+    print(f"\nTrue Original Mean:   {df_complete['Y'].mean():.2f}")
+    print(f"Biased (Drop NA):     {df_mnar['Y'].dropna().mean():.2f}")
+    print(f"Corrected (Heckman):  {df_mnar['Y_Heckman'].mean():.2f}")
+
+
+# =============================================================================
+# SECCIÓN 4: ESCALADO Y NORMALIZACIÓN
+# =============================================================================
+
+def section_scaling():
+    rng_local = np.random.default_rng(6064)
+
+    raw = pd.DataFrame()
+    raw['Normal(-2,1)'] = np.concatenate([rng_local.normal(-2, 1, 9000), rng_local.normal(-2, 3, 1000)])
+    raw['Beta(20,1)']   = rng_local.beta(20, 1, 10000) * 5
+    raw['Exponential(2.5)'] = rng_local.exponential(2.5, 10000)
+    raw['Uniform(-2,2)']    = rng_local.uniform(-2, 2, 10000)
+    raw['Normal(6,4,10)']   = skewnorm.rvs(a=-10, loc=6, scale=4, size=10000)
+    raw['Bimodal'] = np.concatenate([rng_local.normal(0, 0.5, 5000), rng_local.normal(2.5, 1, 5000)])
+
+    scalers = [
+        StandardScaler(with_mean=False, with_std=False),
+        StandardScaler(),
+        RobustScaler(),
+        QuantileTransformer(output_distribution="normal"),
+        MinMaxScaler()
+    ]
+    scaler_names = ["Unscaled", "Standardized", "Robust Scaled", "Quantile (Normal)", "Min-Max"]
+
+    lim1 = [0.6, 2.4, 1.2, 0.6, 0.8, 1.2]
+    lim2 = [10, 12, 12, 1.2, 4, 4]
+
+    fig, ax = plt.subplots(raw.shape[1], len(scalers), figsize=(16, 10))
+
+    for i, scaler in enumerate(scalers):
+        X = pd.DataFrame(scaler.fit_transform(raw), columns=raw.columns)
+        for j, d in enumerate(X.columns):
+            sns.histplot(x=X[d], bins=50, stat="density", linewidth=0,
+                         color=colors[j], ax=ax[j, i])
+            sns.kdeplot(x=X[d], bw_adjust=1.5, fill=True, color=colors[j], ax=ax[j, i])
+
+            ax[j, i].yaxis.set_major_locator(ticker.MaxNLocator(4))
+            ax[j, i].xaxis.set_major_locator(ticker.MaxNLocator(4))
+            ax[j, i].set_title("")
+            ax[j, i].set_xlabel("")
+            ax[j, i].set_ylabel("")
+            ax[j, 0].set_ylabel(d)
+
+            if not j == 5:
+                ax[j, i].set_xticks([])
+
+            if not i == 4:
+                if not i == 0:
+                    ax[j, i].set_yticks([])
+                ax[j, i].set_ylim(0, lim1[j])
+                ax[j, i].set_xlim(-8, 8)
+            else:
+                ax[j, 4].set_ylim(0, lim2[j])
+                ax[j, 4].set_xlim(0, 1)
+                ax[j, 4].yaxis.tick_right()
+
+        ax[0, i].set_title(scaler_names[i])
+
+    plt.tight_layout()
+    plt.show()
+
+    # Vista superpuesta de todas las distribuciones por scaler
+    fig, ax = plt.subplots(1, 5, figsize=(16, 4))
+    for i, scaler in enumerate(scalers):
+        X = pd.DataFrame(scaler.fit_transform(raw))
+        sns.kdeplot(X.melt(var_name="Distribution", value_name="X"),
+                    x="X", hue="Distribution", bw_adjust=2.5, alpha=0.5,
+                    fill=True, legend=False, palette=palette, ax=ax[i])
+        ax[i].set_title(scaler_names[i])
+        ax[i].set_ylabel("Density" if i == 0 else "")
+        ax[i].yaxis.set_major_locator(ticker.MaxNLocator(5))
+        ax[i].xaxis.set_major_locator(ticker.MaxNLocator(5 if not i == 4 else 3))
+        if not i == 4:
+            ax[i].set_xlim(-8, 8)
+            ax[i].set_ylim(0, 0.18)
+            ax[i].yaxis.set_major_formatter(
+                ticker.FuncFormatter(lambda x, _: f'{x:.0e}' if x != 0 else '0'))
+            if not i == 0:
+                ax[i].set_yticks([])
+        else:
+            ax[i].set_ylim(0, 2)
+            ax[i].set_xlim(0, 1)
+            ax[i].yaxis.tick_right()
+
+    h = [patches.Patch(facecolor=colors[i], label=x) for i, x in enumerate(raw.columns)]
+    fig.legend(handles=h, loc="center right", fancybox=True, frameon=False,
+               bbox_to_anchor=(1.11, 0.5), title="Distribution")
+    plt.tight_layout()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 5: DETECCIÓN DE ANOMALÍAS (LAB 03)
+# =============================================================================
+
+def section_anomaly_detection():
+    np.random.seed(42)
+
+    n_samples = 500
+    rpm_normal  = np.random.normal(3000, 150, n_samples)
+    temp_normal = 0.15 * rpm_normal + np.random.normal(50, 10, n_samples)
+
+    df = pd.DataFrame({'RPM': rpm_normal, 'Temperature': temp_normal})
+    df['Label'] = 'Normal'
+
+    # Inyección de error y anomalías
+    df.loc[10, 'Temperature'] = -150
+    df.loc[10, 'Label'] = 'Error'
+
+    df.loc[20, 'RPM'] = 4500
+    df.loc[20, 'Temperature'] = 0.15 * 4500 + 50
+    df.loc[20, 'Label'] = 'Univariate Anomaly'
+
+    df.loc[30:34, 'RPM'] = [3300, 3350, 3400, 3250, 3320]
+    df.loc[30:34, 'Temperature'] = [400, 410, 390, 405, 395]
+    df.loc[30:34, 'Label'] = 'Multivariate Anomaly'
+
+    plt.figure(figsize=(10, 7))
+    sns.scatterplot(x='RPM', y='Temperature', hue='Label', style='Label',
+                    s=70, palette='Set1', data=df, alpha=0.8)
+    plt.title('Raw Turbine Telemetry (Ground Truth)')
+    plt.show()
+
+    # Z-Score
+    df['Z_RPM']  = zscore(df['RPM'])
+    df['Z_Temp'] = zscore(df['Temperature'])
+    df['Z_Outlier'] = (np.abs(df['Z_RPM']) > 3) | (np.abs(df['Z_Temp']) > 3)
+    print("Detectados por Z-Score:")
+    print(df[df['Z_Outlier']][['RPM', 'Temperature', 'Label', 'Z_RPM', 'Z_Temp']])
+
+    # IQR — boxplots
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    sns.boxplot(y=df['RPM'], ax=axes[0], color='skyblue')
+    axes[0].set_title('RPM Boxplot')
+    sns.boxplot(y=df['Temperature'], ax=axes[1], color='salmon')
+    axes[1].set_title('Temperature Boxplot')
+    plt.tight_layout()
+    plt.show()
+
+    # Mahalanobis
+    df_clean = df.drop(10).copy()
+    features  = df_clean[['RPM', 'Temperature']].values
+    centroid  = np.mean(features, axis=0)
+    cov_matrix = np.cov(features, rowvar=False)
+    inv_cov   = np.linalg.inv(cov_matrix)
+
+    mahal_dist = []
+    for row in features:
+        diff = row - centroid
+        dist = np.sqrt(diff.dot(inv_cov).dot(diff.T))
+        mahal_dist.append(dist)
+
+    df_clean['Mahalanobis'] = mahal_dist
+    threshold_m = np.sqrt(stats.chi2.ppf(1 - 0.001, df=2))
+    df_clean['Mahalanobis_Outlier'] = df_clean['Mahalanobis'] > threshold_m
+    print(f"\nMahalanobis Threshold: {threshold_m:.2f}")
+
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x='RPM', y='Temperature', hue='Mahalanobis_Outlier',
+                    palette={False: 'gray', True: 'red'}, data=df_clean, s=60)
+    plt.title('Mahalanobis Distance Outlier Detection')
+    plt.show()
+
+    # ML: Isolation Forest, LOF, One-Class SVM
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(df_clean[['RPM', 'Temperature']])
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+    iso_forest = IsolationForest(contamination=0.03, random_state=42)
+    iso_preds  = iso_forest.fit_predict(X_scaled)
+    sns.scatterplot(x=df_clean['RPM'], y=df_clean['Temperature'],
+                    hue=iso_preds, palette={1: 'gray', -1: 'red'}, ax=axes[0], legend=False)
+    axes[0].set_title('Isolation Forest\n(Tree-based)')
+
+    lof = LocalOutlierFactor(n_neighbors=20, contamination=0.03)
+    lof_preds = lof.fit_predict(X_scaled)
+    sns.scatterplot(x=df_clean['RPM'], y=df_clean['Temperature'],
+                    hue=lof_preds, palette={1: 'gray', -1: 'red'}, ax=axes[1], legend=False)
+    axes[1].set_title('Local Outlier Factor\n(Density-based)')
+
+    ocsvm = OneClassSVM(kernel='rbf', gamma='scale', nu=0.03)
+    ocsvm_preds = ocsvm.fit_predict(X_scaled)
+    sns.scatterplot(x=df_clean['RPM'], y=df_clean['Temperature'],
+                    hue=ocsvm_preds, palette={1: 'gray', -1: 'red'}, ax=axes[2], legend=False)
+    axes[2].set_title('One-Class SVM\n(Boundary-based)')
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 6: BOOTSTRAPPING
+# =============================================================================
+
+def section_bootstrapping():
+    np.random.seed(42)
+    sns.set_style("ticks")
+
+    tbf_data   = np.array([8, 10, 9, 12, 11, 85])
+    n_obs      = len(tbf_data)
+    n_iter     = 10000
+
+    print(f"Original Median: {np.median(tbf_data)} months")
+    print(f"Original Mean:   {np.mean(tbf_data):.2f} months")
+
+    # Non-parametric bootstrap
+    non_param_medians = np.zeros(n_iter)
+    for i in range(n_iter):
+        sample = np.random.choice(tbf_data, size=n_obs, replace=True)
+        non_param_medians[i] = np.median(sample)
+
+    ci_np_lower = np.percentile(non_param_medians, 2.5)
+    ci_np_upper = np.percentile(non_param_medians, 97.5)
+    print(f"Non-Parametric 95% CI: [{ci_np_lower}, {ci_np_upper}]")
+
+    # Parametric bootstrap (Exponential MLE)
+    lambda_hat   = 1 / np.mean(tbf_data)
+    param_medians = np.zeros(n_iter)
+    for i in range(n_iter):
+        sample = np.random.exponential(scale=1 / lambda_hat, size=n_obs)
+        param_medians[i] = np.median(sample)
+
+    ci_p_lower = np.percentile(param_medians, 2.5)
+    ci_p_upper = np.percentile(param_medians, 97.5)
+    print(f"Parametric 95% CI:     [{ci_p_lower:.2f}, {ci_p_upper:.2f}]")
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
+    axes[0].hist(non_param_medians, bins=30, color='coral', edgecolor='black', alpha=0.7)
+    axes[0].axvline(ci_np_lower, color='red', linestyle='dashed', linewidth=2)
+    axes[0].axvline(ci_np_upper, color='red', linestyle='dashed', linewidth=2)
+    axes[0].set_title('Non-Parametric Bootstrapped Medians')
+    axes[0].set_xlabel('Median TBF (Months)')
+    axes[0].set_ylabel('Frequency')
+
+    axes[1].hist(param_medians, bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+    axes[1].axvline(ci_p_lower, color='blue', linestyle='dashed', linewidth=2)
+    axes[1].axvline(ci_p_upper, color='blue', linestyle='dashed', linewidth=2)
+    axes[1].set_title('Parametric Bootstrapped Medians')
+    axes[1].set_xlabel('Median TBF (Months)')
+    plt.tight_layout()
+    plt.show()
+
+    # Bootstrap sobre datos solares con LinearRegression
+    def generate_realistic_solar_data(n=100):
+        G = np.random.uniform(100, 1000, n)
+        power = 0.15 * G - 0.00002 * (G ** 2) + np.random.normal(0, G * 0.04)
+        return G, power
+
+    G, P = generate_realistic_solar_data(200)
+    G_res = G.reshape(-1, 1)
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(G, P, alpha=0.3, label='Data (Realistic)')
+
+    slopes = []
+    for _ in range(100):
+        indices = np.random.choice(range(len(G)), size=len(G), replace=True)
+        G_boot, P_boot = G_res[indices], P[indices]
+        model = LinearRegression().fit(G_boot, P_boot)
+        slopes.append(model.coef_[0])
+        x_range = np.array([[100], [1000]])
+        plt.plot(x_range, model.predict(x_range), color='red', alpha=0.05)
+
+    plt.title("Bootstrapping Linear Slopes on Non-Linear Solar Data")
+    plt.xlabel("Irradiance (W/m²)")
+    plt.ylabel("Power Output")
+    plt.show()
+
+    print(f"Mean Bootstrap Slope: {np.mean(slopes):.4f}")
+    print(f"95% CI for Slope: [{np.percentile(slopes, 2.5):.4f}, {np.percentile(slopes, 97.5):.4f}]")
+
+
+# =============================================================================
+# SECCIÓN 7: EDA — ANÁLISIS EXPLORATORIO (requiere mpg.csv)
+# =============================================================================
+
+def section_eda(csv_path="mpg.csv"):
+    try:
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError:
+        print(f"[EDA] Archivo '{csv_path}' no encontrado. Saltando sección.")
+        return
+
+    numeric_vars  = df.select_dtypes(include=float).columns.tolist()
+
+    # 7.1 Screening continuo
+    fig, ax = plt.subplots(nrows=1, ncols=len(numeric_vars), sharey=True, figsize=(24, 6))
+    for i, var in enumerate(numeric_vars):
+        raw_max = df[var].max() * 1.3
+        step = 10 if raw_max < 100 else (100 if raw_max < 1000 else 1000)
+        xmax = int(np.ceil(raw_max / step) * step)
+        all_ticks = np.arange(0, xmax + step, step, dtype=int)
+        ticks = (all_ticks[np.linspace(0, len(all_ticks) - 1, 5, dtype=int)]
+                 if len(all_ticks) > 4 else all_ticks)
+
+        sns.histplot(data=df, x=var, fill=True, bins=15, alpha=0.5,
+                     color=colors_map['usa'], linewidth=1, edgecolor="white", ax=ax[i])
+        ax[i].axvline(df[var].mean(), color=colors_map["europe"], lw=1)
+        ax[i].axvline(df[var].median(), color=colors_map["japan"], lw=1)
+        ax[i].set_title(var.title())
+        ax[i].set_xlabel("")
+        ax[i].set_xlim(0, xmax)
+        ax[i].set_xticks(ticks)
+        ax[i].set_ylim(0, 100)
+
+    plt.tight_layout()
+    plt.show()
+
+    # 7.2 Análisis por variable con 4-panel
+    for var in ['mpg', 'acceleration', 'displacement', 'weight', 'horsepower', 'cylinders']:
+        if var in df.columns:
+            plot_variable_analysis(df, var, category="origin", palette=colors_map)
+
+    # 7.3 Estadísticos descriptivos
+    desc_stats = df.select_dtypes(include=[np.number]).describe().T
+    desc_stats['median']   = df.select_dtypes(include=[np.number]).median()
+    desc_stats['skewness'] = df.select_dtypes(include=[np.number]).skew()
+    desc_stats['kurtosis'] = df.select_dtypes(include=[np.number]).kurtosis()
+    print(desc_stats[['mean', 'median', 'std', 'min', 'max', 'skewness', 'kurtosis']].round(2))
+
+    # 7.4 eCDF
+    plot_ecdf_variable_analysis(df, ["mpg", "displacement", "horsepower"],
+                                category="origin", palette=colors_map)
+
+    # 7.5 Matrices de correlación
+    plot_correlation_heatmap(df)
+
+    # 7.6 Análisis bivariado continuo
+    bivariate_calls = [
+        dict(x="horsepower", y="mpg", plot_reg=False),
+        dict(x="horsepower", y="mpg", log_x=True, plot_reg=False),
+        dict(x="horsepower", y="mpg", log_x=True, split_category=True),
+        dict(x="displacement", y="mpg", log_x=True, split_category=True, size_var="cylinders"),
+        dict(x="horsepower", y="acceleration", split_category=True),
+    ]
+    for kwargs in bivariate_calls:
+        plot_bivariate_analysis(df=df, category="origin", palette=colors_map, **kwargs)
+
+    # 7.7 Análisis categórico
+    for y in ['mpg', 'horsepower', 'acceleration']:
+        plot_categorical_bivariate_analysis(df, x="cylinders", y=y,
+                                            category="origin", palette=colors_map)
+
+    # 7.8 Análisis temporal
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharex=True)
+    for ax, y_var, title in zip(axes,
+                                ['mpg', 'horsepower'],
+                                ['Fuel Efficiency (MPG)', 'Horsepower']):
+        sns.lineplot(data=df, x="model_year", y=y_var, hue="origin",
+                     estimator="mean", errorbar=("ci", 99), err_kws={"alpha": 0.1},
+                     palette=colors_map, ax=ax)
+        ax.set_title(f"Evolution of {title} over Time")
+    plt.tight_layout()
+    plt.show()
+
+
+# =============================================================================
+# SECCIÓN 8: INFERENCIA ESTADÍSTICA (requiere mpg.csv)
+# =============================================================================
+
+def section_inference(csv_path="mpg.csv"):
+    try:
+        df = pd.read_csv(csv_path).dropna()
+    except FileNotFoundError:
+        print(f"[Inference] Archivo '{csv_path}' no encontrado. Saltando sección.")
+        return
+
+    usa_cars    = df[df['origin'] == 'usa']
+    japan_cars  = df[df['origin'] == 'japan']
+    europe_cars = df[df['origin'] == 'europe']
+    numerical_columns = ['mpg', 'displacement', 'horsepower', 'weight', 'acceleration']
+
+    print(f"Poblaciones: {len(usa_cars)} USA, {len(japan_cars)} Japón, {len(europe_cars)} Europa")
+
+    # 8.1 Shapiro-Wilk
+    shapiro_results = []
+    for col in numerical_columns:
+        try:
+            stat, p = stats.shapiro(df[col])
+            shapiro_results.append({'Variable': col.upper(), 'Statistic': stat,
+                                    'p-value': p, 'Normality': 'Normal' if p > 0.05 else 'Not Normal'})
+        except Exception as e:
+            shapiro_results.append({'Variable': col.upper(), 'Statistic': np.nan,
+                                    'p-value': np.nan, 'Normality': f'Error: {e}'})
+    shapiro_df = pd.DataFrame(shapiro_results)
+    print("\nShapiro-Wilk (dataset completo):")
+    print(shapiro_df.round(2))
+
+    # 8.2 Levene's Test
+    region_data = {'USA': usa_cars, 'Europe': europe_cars, 'Japan': japan_cars}
+    levene_results = []
+    for col in numerical_columns:
+        stat, p = stats.levene(
+            region_data['USA'][col], region_data['Europe'][col], region_data['Japan'][col])
+        levene_results.append({'Variable': col.upper(), 'Comparison': 'USA vs Europe vs Japan',
+                               'Statistic': stat, 'p-value': p,
+                               'Variance': 'Equal' if p > 0.05 else 'Not Equal'})
+        for g1, g2 in [('USA', 'Japan'), ('USA', 'Europe'), ('Europe', 'Japan')]:
+            stat, p = stats.levene(region_data[g1][col], region_data[g2][col])
+            levene_results.append({'Variable': col.upper(), 'Comparison': f'{g1} vs {g2}',
+                                   'Statistic': stat, 'p-value': p,
+                                   'Variance': 'Equal' if p > 0.05 else 'Not Equal'})
+    levene_df = pd.DataFrame(levene_results)
+    print("\nLevene's Test (3 grupos):")
+    print(levene_df[levene_df['Comparison'] == 'USA vs Europe vs Japan'].drop(columns=['Comparison']).round(3))
+
+    # 8.3 ANOVA, Welch's t-test, Mann-Whitney U
+    groups = {'USA': usa_cars, 'Europe': europe_cars, 'Japan': japan_cars}
+    pairwise_tests = [('USA', 'Japan'), ('USA', 'Europe'), ('Europe', 'Japan')]
+
+    anova_results, welch_results, mannwhitney_results = [], [], []
+
+    for col in numerical_columns:
+        f_stat, f_p = stats.f_oneway(groups['USA'][col], groups['Europe'][col], groups['Japan'][col])
+        anova_results.append({'Variable': col.upper(), 'F-Statistic': f_stat, 'p-value': f_p})
+
+        for g1, g2 in pairwise_tests:
+            pair_label = f'{g1} vs {g2}'
+            t_stat, t_p, _ = ttest_ind(groups[g1][col], groups[g2][col], usevar='unequal')
+            welch_results.append({'Variable': col.upper(), 'Pair': pair_label,
+                                  'Statistic': t_stat, 'p-value': t_p})
+            u_stat, u_p = stats.mannwhitneyu(groups[g1][col], groups[g2][col], alternative='two-sided')
+            mannwhitney_results.append({'Variable': col.upper(), 'Pair': pair_label,
+                                        'Statistic': u_stat, 'p-value': u_p})
+
+    anova_df = pd.DataFrame(anova_results).set_index('Variable')
+    welch_df = pd.DataFrame(welch_results).set_index(['Variable', 'Pair'])
+    mannwhitney_df = pd.DataFrame(mannwhitney_results).set_index(['Variable', 'Pair'])
+
+    print("\nANOVA (una vía):")
+    print(anova_df.round(3))
+    print("\nWelch's t-test — USA vs Japan:")
+    print(welch_df.loc[pd.IndexSlice[:, "USA vs Japan"], :].reset_index().drop(columns=["Pair"]).round(3))
+    print("\nMann-Whitney U — USA vs Japan:")
+    print(mannwhitney_df.loc[pd.IndexSlice[:, "USA vs Japan"], :].reset_index().drop(columns=["Pair"]).round(3))
+
+    # 8.4 KS, KL Divergence, Bhattacharyya
+    def kl_divergence(p, q):
+        eps = 1e-10
+        p, q = np.asarray(p) + eps, np.asarray(q) + eps
+        p, q = p / p.sum(), q / q.sum()
+        return np.sum(rel_entr(p, q))
+
+    def bhattacharyya_distance(p, q):
+        eps = 1e-10
+        p, q = np.asarray(p) + eps, np.asarray(q) + eps
+        p, q = p / p.sum(), q / q.sum()
+        return -np.log(np.sum(np.sqrt(p * q)))
+
+    origins_data = {'USA': usa_cars, 'Europe': europe_cars, 'Japan': japan_cars}
+    dist_results = []
+
+    for col in numerical_columns:
+        for o1 in origins_data:
+            for o2 in origins_data:
+                if o1 == o2:
+                    continue
+                s1, s2 = origins_data[o1][col], origins_data[o2][col]
+                ks_stat, ks_p = stats.ks_2samp(s1, s2)
+                combined = np.concatenate([s1, s2])
+                bins = np.histogram_bin_edges(combined, bins=30)
+                p_c, _ = np.histogram(s1, bins=bins, density=False)
+                q_c, _ = np.histogram(s2, bins=bins, density=False)
+                p_pr = p_c / p_c.sum()
+                q_pr = q_c / q_c.sum()
+                pair_str = f"{o1} vs {o2}"
+                dist_results.append({
+                    ('Variable', ''): col.upper(),
+                    ('Pair', ''): pair_str,
+                    ('KS', 'Statistic'): ks_stat,
+                    ('KS', 'p-value'): ks_p,
+                    ('KL Divergence', 'Statistic'): kl_divergence(p_pr, q_pr),
+                    ('Bhattacharyya', 'Statistic'): bhattacharyya_distance(p_pr, q_pr),
+                })
+
+    dist_df = pd.DataFrame(dist_results)
+    dist_df.columns = pd.MultiIndex.from_tuples(dist_df.columns)
+    dist_df = dist_df.set_index([('Variable', ''), ('Pair', '')])
+    dist_df.index.names = ['Variable', 'Pair']
+
+    print("\nDistribution Differences — USA vs Japan:")
+    print(dist_df.loc[pd.IndexSlice[:, "USA vs Japan"], :].reset_index()
+          .drop(columns=[('Pair', '')]).round(3))
+
+
+# =============================================================================
+# MAIN — Ejecutar todas las secciones
+# =============================================================================
+
+if __name__ == "__main__":
+    print("=" * 70)
+    print("1. DISTRIBUCIONES DE PROBABILIDAD")
+    print("=" * 70)
+    section_distributions()
+
+    print("=" * 70)
+    print("2. TRANSFORMACIONES DE DATOS")
+    print("=" * 70)
+    section_data_transformation()
+
+    print("=" * 70)
+    print("3. VALORES FALTANTES E IMPUTACIÓN")
+    print("=" * 70)
+    section_missing_values()
+
+    print("=" * 70)
+    print("4. ESCALADO Y NORMALIZACIÓN")
+    print("=" * 70)
+    section_scaling()
+
+    print("=" * 70)
+    print("5. DETECCIÓN DE ANOMALÍAS")
+    print("=" * 70)
+    section_anomaly_detection()
+
+    print("=" * 70)
+    print("6. BOOTSTRAPPING")
+    print("=" * 70)
+    section_bootstrapping()
+
+    print("=" * 70)
+    print("7. EDA (requiere mpg.csv en el mismo directorio)")
+    print("=" * 70)
+    section_eda("mpg.csv")
+
+    print("=" * 70)
+    print("8. INFERENCIA ESTADÍSTICA (requiere mpg.csv)")
+    print("=" * 70)
+    section_inference("mpg.csv")

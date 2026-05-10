@@ -1,0 +1,55 @@
+# Data Analytics 101: Análisis de Readmisiones Hospitalarias y Estancia
+Universidad Iberoamericana, Ciudad de México
+
+## 1 Introducción
+El hospital enfrenta un desafío operativo y de calidad crucial. Su tasa de readmisiones no planificadas de pacientes diabéticos dentro de los 30 días posteriores al alta es una preocupación principal, ya que impacta negativamente el bienestar del paciente y conlleva costosas penalizaciones regulatorias. Han sido contratados como analistas de datos para el hospital, con el objetivo de investigar, modelar e interpretar patrones en los datos clínicos que permitan comprender los factores asociados con la probabilidad de readmisión, la recurrencia hospitalaria, y la duración de las estancias hospitalarias.
+
+## 2 Componentes del Análisis
+
+| Aspecto a Modelar | Preguntas Clave del Análisis |
+| :--- | :--- |
+| Riesgo de Readmisión | El hospital desea comprender qué factores caracterizan a los pacientes con mayor riesgo de readmisión. ¿Cómo se distribuye la probabilidad de readmisión en la población de pacientes? ¿Existen diferencias significativas en el riesgo de readmisión entre grupos de edad, género o diagnóstico? ¿Qué variables clínicas están más asociadas con la readmisión? ¿Existen subpoblaciones con riesgo particularmente alto? ¿Qué características clínicas distinguen a los pacientes que sí son readmitidos de aquellos que no lo son? |
+| Recurrencia Hospitalaria | Algunos pacientes presentan múltiples admisiones previas. El hospital desea entender este fenómeno. ¿Cuál es la distribución de admisiones previas? ¿Existen factores clínicos asociados con una mayor recurrencia hospitalaria? ¿La recurrencia está asociada con el número de medicamentos o procedimientos? ¿La distribución de admisiones presenta sobredispersión? |
+| Duración de las Estancias Hospitalarias | Las estancias prolongadas afectan la capacidad operativa del hospital. ¿Cuál es la distribución de los días de estancia? ¿Existen diferencias significativas en la duración de estancias entre grupos clínicos? ¿Qué variables influyen en estancias más largas? ¿La distribución presenta asimetría o colas largas? |
+
+## 3 Objetivos
+
+| Aspecto a Modelar | Preguntas Clave del Análisis |
+| :--- | :--- |
+| Comprensión Estructural de los Datos | Analizar la estructura, calidad y limitaciones del conjunto de datos, identificando: valores faltantes, inconsistencias, outliers, posibles sesgos de medición o registro. |
+| Análisis Exploratorio y Comparación de Distribuciones | Realizar un EDA profundo para identificar patrones en las características de los pacientes y su relación con: readmisiones, recurrencia hospitalaria y duración de estancias. |
+| Inferencia Estadística | Aplicar pruebas estadísticas formales para evaluar hipótesis relevantes sobre el comportamiento de los pacientes. El objetivo es distinguir patrones reales de variabilidad aleatoria. |
+| Modelado Estadístico | Desarrollar modelos estadísticos interpretables para analizar tres fenómenos clínicos: Riesgo de readmisión, Frecuencia de admisiones previas, Duración de las estancias hospitalarias. |
+
+## 4 El Conjunto de Datos
+Los datos para el proyecto son "Diabetes 130-Hospitals" (Fuente: UC Irvine / Kaggle). Este conjunto de datos representa 100,000 admisiones hospitalarias de pacientes con diabetes en 130 hospitales de EE.UU.
+
+* **readmitted:** Indica si el paciente fue readmitido en los siguientes 30 días.
+* **time_in_hospital:** Días de estancia hospitalaria.
+* **number_inpatient:** Número de admisiones previas en el último año.
+* **diag_1, diag_2, diag_3:** Diagnósticos principales (códigos ICD-9).
+* **weight, age, race:** Características demográficas del paciente.
+* **medical_specialty:** Especialidad médica responsable.
+* **num_lab_procedures:** Número de pruebas de laboratorio realizadas.
+* **num_medications:** Número de medicamentos prescritos.
+* **number_emergency:** Número de visitas previas a urgencias.
+* **change:** Si hubo cambio en la medicación.
+* **diabetesMed:** Si el paciente recibió medicación para diabetes.
+
+## 5 Entregables del Proyecto
+Deben entregar tres elementos:
+
+1. Un Jupyter Notebook (.ipynb) con el código, análisis y visualizaciones. El notebook debe estar bien comentado y estructurado.
+2. Un Informe Profesional (PDF de 5-7 páginas) que resuma tu metodología, hallazgos clave, interpretación de modelos y recomendaciones de negocio para la directiva del hospital. Incluyendo un resumen ejecutivo al inicio del reporte el equivalente a un abstract.
+3. Una Presentación Tipo Consultoría (no más de 5-6 diapositivas) representando visualmente los hallazgos clave y recomendaciones de negocio basadas en estos hallazgos.
+
+## Table 1: Rúbrica de Evaluación del Proyecto
+
+| Criterio | Excelente (90-100%) | Bueno (75-89%) | Satisfactorio (60-74%) | Puntaje |
+| :--- | :--- | :--- | :--- | :--- |
+| Calidad del Dato & Preprocesamiento (20 pts) | Evaluación rigurosa de calidad del dato (missing, outliers, consistencia). Limpieza y transformaciones bien justificadas y documentadas. | Manejo correcto de datos faltantes y transformaciones básicas con justificación limitada. | Errores en limpieza o transformaciones; decisiones sin justificar. | /20 |
+| Análisis Exploratorio (EDA) (25 pts) | EDA profundo con análisis uni/bivariado y visualizaciones apropiadas (histogramas, boxplots, correlaciones, ECDF). Interpretación clara de patrones. | EDA correcto con visualizaciones adecuadas pero interpretación limitada. | EDA superficial o principalmente descriptivo; visualizaciones pobres o mal interpretadas. | /25 |
+| Inferencia Estadística (25 pts) | Uso correcto de pruebas estadísticas (t, Mann-Whitney, ANOVA, $\chi^{2}$, K-S, etc.). Verificación de supuestos e interpretación clara de resultados. | Pruebas correctas pero con validación parcial de supuestos o interpretación limitada. | Uso incorrecto de pruebas o interpretación errónea de resultados. | /25 |
+| Modelado Estadístico (20 pts) | Modelos apropiados (logística, Poisson, NB, Gamma o lineal). Diagnóstico de supuestos e interpretación clara de coeficientes. | Modelos correctos pero con diagnóstico o interpretación limitada. | Errores en implementación o falta de interpretación. | /20 |
+| Informe y Comunicación (10 pts) | Reporte claro y profesional. Código reproducible y bien documentado. Insights y conclusiones accionables. | Reporte claro pero con organización o síntesis mejorable. | Informe incompleto o difícil de seguir. Código poco documentado. | /10 |
+| Total | | | | /100 |

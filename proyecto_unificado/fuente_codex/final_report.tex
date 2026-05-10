@@ -1,0 +1,233 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\geometry{margin=2.4cm}
+
+\title{\textbf{Proyecto Final\\Readmisiones, Recurrencia y Estancia Hospitalaria}}
+\author{Data Analytics 101 \\ Universidad Iberoamericana}
+\date{23 de abril de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este proyecto estudia a pacientes con diabetes para responder tres preguntas:
+\begin{enumerate}[leftmargin=1.6em]
+    \item qué factores se relacionan con una readmisión en menos de 30 días,
+    \item qué factores se relacionan con más admisiones hospitalarias previas,
+    \item y qué factores se relacionan con estancias más largas.
+\end{enumerate}
+
+El trabajo siguió una lógica simple. Primero se revisó la calidad del dato. Después se hizo análisis exploratorio. Luego se usaron pruebas estadísticas para validar los patrones observados. Finalmente, se construyeron modelos interpretables para cada variable respuesta.
+
+La conclusión general es que la readmisión, la recurrencia y la estancia larga están conectadas con señales de complejidad clínica y uso previo del hospital. Sin embargo, cada fenómeno tiene una forma distinta y por eso necesita un enfoque estadístico diferente.
+\end{abstract}
+
+\section{Problema de negocio}
+
+Las readmisiones no planeadas afectan al paciente y también complican la operación del hospital. Cuando un paciente regresa varias veces o permanece más tiempo del esperado, se ocupan camas, personal y recursos.
+
+Este proyecto se enfoca en tres metas:
+\begin{enumerate}[leftmargin=1.6em]
+    \item detectar señales de mayor riesgo de readmisión,
+    \item entender qué caracteriza a los pacientes con más recurrencia,
+    \item encontrar variables asociadas con estancias más largas.
+\end{enumerate}
+
+\section{Datos}
+
+Se usó el archivo \texttt{diabetic\_data.csv}. El conjunto contiene 101,766 registros de pacientes con diabetes en hospitales de Estados Unidos.
+
+Las variables más importantes para este análisis fueron:
+\begin{itemize}[leftmargin=1.6em]
+    \item \texttt{readmitted},
+    \item \texttt{time\_in\_hospital},
+    \item \texttt{number\_inpatient},
+    \item \texttt{num\_medications},
+    \item \texttt{num\_lab\_procedures},
+    \item \texttt{number\_diagnoses},
+    \item \texttt{diabetesMed},
+    \item \texttt{change}.
+\end{itemize}
+
+\section{Calidad del dato y preprocesamiento}
+
+La primera parte del trabajo fue revisar la calidad del dato. Esto fue importante porque varias variables tenían datos faltantes o valores codificados como \texttt{?}.
+
+Los puntos más importantes fueron:
+\begin{itemize}[leftmargin=1.6em]
+    \item varios campos usaban \texttt{?} para representar datos faltantes,
+\item algunas variables tenían muchos faltantes, por ejemplo peso, especialidad médica y código de pagador,
+    \item borrar filas de forma agresiva habría eliminado demasiada información.
+\end{itemize}
+
+Por eso se tomaron estas decisiones:
+\begin{enumerate}[leftmargin=1.6em]
+    \item convertir \texttt{?} en valores faltantes reales,
+    \item sacar identificadores como \texttt{encounter\_id} y \texttt{patient\_nbr} del modelado,
+    \item crear la variable \texttt{readmit\_30}, donde 1 significa readmisión en menos de 30 días,
+    \item conservar la ausencia de datos como parte del diagnóstico en lugar de esconderla.
+\end{enumerate}
+
+La idea principal de esta sección es sencilla: no se limpió por costumbre, sino para no distorsionar el análisis.
+
+\section{Análisis exploratorio}
+
+El análisis exploratorio mostró tres patrones importantes.
+
+\subsection{La estancia no es una variable simétrica}
+
+La variable \texttt{time\_in\_hospital} es positiva y está sesgada a la derecha. En palabras simples, la mayoría de las estancias son relativamente cortas, pero existe un grupo de pacientes que permanece mucho más tiempo.
+
+\subsection{La recurrencia es un conteo con sobredispersión}
+
+La variable \texttt{number\_inpatient} tiene muchos ceros y una cola larga. Además, su varianza es mayor que su media. Esto sugiere que un modelo Poisson simple puede quedarse corto.
+
+\subsection{La readmisión cambia entre grupos}
+
+Se observaron diferencias de readmisión entre grupos definidos por:
+\begin{itemize}[leftmargin=1.6em]
+    \item edad,
+    \item uso de medicamento para diabetes,
+    \item cambio de medicación,
+    \item uso previo del hospital.
+\end{itemize}
+
+Este paso fue importante porque ayudó a entender la forma de las variables antes de aplicar pruebas o modelos.
+
+\section{Inferencia estadística}
+
+Después del análisis exploratorio, se hicieron pruebas para revisar si los patrones visuales también aparecían como diferencias estadísticamente claras.
+
+Se usaron:
+\begin{itemize}[leftmargin=1.6em]
+    \item Shapiro-Wilk para revisar normalidad,
+    \item Levene para revisar varianzas,
+    \item Mann-Whitney y Kolmogorov-Smirnov para comparar distribuciones,
+    \item Chi-cuadrada para variables categóricas.
+\end{itemize}
+
+La conclusión simple fue esta:
+\begin{enumerate}[leftmargin=1.6em]
+    \item las variables principales de uso hospitalario no se comportan como variables normales limpias,
+    \item eso justifica usar pruebas robustas o no paramétricas,
+    \item algunas variables de tratamiento y perfil del paciente sí muestran asociación con la readmisión.
+\end{enumerate}
+
+\section{Modelos e interpretación}
+
+\subsection{Modelo de readmisión a 30 días}
+
+Se usó un GLM binomial porque la variable respuesta es binaria.
+
+Resultados generales:
+\begin{itemize}[leftmargin=1.6em]
+    \item AUC aproximada: 0.64
+    \item accuracy aproximada: 0.889
+\end{itemize}
+
+Este resultado no significa que el modelo sea excelente para predecir. Significa que sí sirve para entender la dirección de varias asociaciones.
+
+Los hallazgos más útiles fueron:
+\begin{enumerate}[leftmargin=1.6em]
+    \item \texttt{number\_inpatient} fue una de las señales más fuertes. Una admisión previa adicional se asoció con un aumento de alrededor de 31\% en las odds de readmisión.
+    \item \texttt{diabetesMed = Yes} también se relacionó con mayor readmisión. Esta categoría se asoció con alrededor de 18\% más odds de readmisión.
+    \item Más diagnósticos, más visitas previas a urgencias y más días de estancia también se relacionaron con mayor riesgo.
+\end{enumerate}
+
+En lenguaje simple, este modelo sugiere que los pacientes con historia hospitalaria más pesada y con mayor complejidad clínica tienen más riesgo de regresar en menos de 30 días.
+
+\subsection{Modelo de recurrencia hospitalaria}
+
+Se comparó un modelo Poisson con una Binomial Negativa.
+
+Resultados generales:
+\begin{itemize}[leftmargin=1.6em]
+    \item Poisson quedó un poco mejor en error simple de prueba,
+    \item la Binomial Negativa tuvo un AIC mucho menor,
+    \item el parámetro \(\alpha\) fue cercano a 1.56.
+\end{itemize}
+
+La idea importante no es solo cuál modelo gana en una métrica. La idea importante es que la recurrencia tiene más variación de la que Poisson espera.
+
+Los hallazgos más útiles fueron:
+\begin{enumerate}[leftmargin=1.6em]
+    \item las visitas previas a urgencias fueron la señal más fuerte,
+    \item las visitas ambulatorias previas también fueron importantes,
+    \item más días de estancia y más medicamentos también se relacionaron con más recurrencia.
+\end{enumerate}
+
+En lenguaje simple, esto significa que la recurrencia no aparece de forma pareja en toda la población. Se concentra en pacientes con más uso previo del sistema y mayor complejidad.
+
+\subsection{Modelo de duración de estancia}
+
+Se usó un GLM Gamma con enlace log porque \texttt{time\_in\_hospital} es positiva y sesgada a la derecha.
+
+Resultados generales:
+\begin{itemize}[leftmargin=1.6em]
+    \item RMSE aproximado: 2.59
+    \item MAE aproximado: 1.94
+\end{itemize}
+
+Los hallazgos más útiles fueron:
+\begin{enumerate}[leftmargin=1.6em]
+    \item cada diagnóstico adicional se asoció con un aumento cercano a 3\% en la estancia esperada,
+    \item cada admisión previa adicional se asoció con cerca de 3\% más duración esperada,
+    \item cada medicamento adicional también se asoció con un aumento cercano a 3\% en la estancia esperada.
+\end{enumerate}
+
+En palabras simples, los pacientes con mayor complejidad clínica y más historia de uso hospitalario tienden a quedarse más tiempo.
+
+\section{Recomendaciones}
+
+Con base en el análisis, las recomendaciones más claras son:
+\begin{enumerate}[leftmargin=1.6em]
+    \item reforzar el seguimiento al alta en pacientes con más uso previo del hospital,
+    \item tratar la recurrencia como un problema concentrado en ciertos perfiles,
+    \item usar señales de complejidad, como más diagnósticos y más medicamentos, para anticipar estancias largas.
+\end{enumerate}
+
+La idea central es que el hospital gana más si identifica mejor a los pacientes complejos antes de que regresen, en lugar de tratar igual a todos.
+
+\section{Limitaciones}
+
+Este análisis tiene límites importantes:
+\begin{enumerate}[leftmargin=1.6em]
+    \item muestra asociación, no causalidad,
+    \item hay variables con faltantes importantes,
+    \item el dataset es administrativo y tiene límites de registro,
+    \item el análisis está a nivel de encuentros hospitalarios, no de toda la historia clínica completa de cada paciente.
+\end{enumerate}
+
+\section{Conclusión}
+
+La conclusión general del proyecto puede resumirse así:
+
+La readmisión, la recurrencia y la estancia larga comparten señales de complejidad clínica y uso previo del hospital. Sin embargo, no son exactamente el mismo fenómeno. Por eso fue necesario usar un enfoque distinto para cada uno: un modelo binario para readmisión, un modelo de conteo para recurrencia y un modelo positivo sesgado para la estancia.
+
+Ese es el aporte principal del trabajo: no solo encontrar patrones, sino encontrar una forma clara y defendible de explicarlos.
+
+\section*{Siguiente paso recomendado}
+
+En la siguiente iteración conviene agregar:
+\begin{itemize}[leftmargin=1.6em]
+    \item figuras seleccionadas del notebook,
+    \item una tabla corta con resultados clave,
+    \item y una versión final más compacta para ajustarse a 5--7 páginas.
+\end{itemize}
+
+\end{document}

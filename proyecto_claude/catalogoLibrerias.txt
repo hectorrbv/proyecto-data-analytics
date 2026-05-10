@@ -1,0 +1,513 @@
+# Catálogo de Librerías — Data Analytics
+
+---
+
+## 1. `numpy` (importado como `np`)
+
+Operaciones numéricas vectorizadas sobre arrays N-dimensionales.
+
+| Función / Método | Uso |
+|---|---|
+| `np.array()` | Crear array desde lista |
+| `np.zeros()` | Array de ceros |
+| `np.arange()` | Secuencia entera |
+| `np.linspace()` | Secuencia flotante uniforme |
+| `np.concatenate()` | Unir arrays en un eje |
+| `np.mean()` | Media aritmética |
+| `np.median()` | Mediana |
+| `np.std()` | Desviación estándar |
+| `np.percentile()` | Percentil k de un array |
+| `np.sqrt()` | Raíz cuadrada |
+| `np.log()` / `np.log10()` | Logaritmo natural / base 10 |
+| `np.exp()` | Función exponencial |
+| `np.abs()` | Valor absoluto |
+| `np.clip()` | Limitar valores en rango |
+| `np.random.seed()` | Semilla de aleatoriedad |
+| `np.random.default_rng()` | Generador moderno (`.normal()`, `.exponential()`, etc.) |
+| `np.random.choice()` | Muestreo con/sin reemplazo |
+| `np.random.rand()` | Uniforme [0,1) |
+| `np.random.normal()` | Distribución normal |
+| `np.random.lognormal()` | Distribución log-normal |
+| `np.random.exponential()` | Distribución exponencial |
+| `np.linalg.inv()` | Inversa de matriz |
+| `np.cov()` | Matriz de covarianza |
+| `np.isnan()` | Máscara booleana de NaN |
+| `np.full_like()` | Array del mismo shape con valor constante |
+| `np.histogram_bin_edges()` | Bordes de bins para histograma |
+| `np.histogram()` | Histograma como conteos + bordes |
+| `np.sum()` / `np.nanmax()` | Suma / máximo ignorando NaN |
+
+### Ejemplos de código real
+
+```python
+# Generar datos sintéticos con el generador moderno
+rng = np.random.default_rng(42)
+N = 5000
+raw = pd.DataFrame({
+    'Exponential': rng.exponential(scale=2, size=N),
+    'Gamma':       rng.gamma(shape=2.5, scale=2, size=N),
+    'Lognormal':   rng.lognormal(mean=1.5, sigma=0.5, size=N),
+})
+
+# Aplicar transformación y calcular percentil
+non_param_medians = np.zeros(10000)
+for i in range(10000):
+    sample = np.random.choice(tbf_data, size=len(tbf_data), replace=True)
+    non_param_medians[i] = np.median(sample)
+
+ci_lower = np.percentile(non_param_medians, 2.5)
+ci_upper = np.percentile(non_param_medians, 97.5)
+
+# Concatenar dos arrays (distribución bimodal)
+bimodal = np.concatenate([rng.normal(0, 0.5, 5000), rng.normal(2.5, 1, 5000)])
+```
+
+---
+
+## 2. `pandas` (importado como `pd`)
+
+Estructura tabular `DataFrame` y herramientas de análisis de datos.
+
+| Función / Método | Uso |
+|---|---|
+| `pd.DataFrame()` | Crear DataFrame desde dict, array, etc. |
+| `pd.Series()` | Serie unidimensional |
+| `pd.read_csv()` | Leer CSV |
+| `pd.to_datetime()` | Convertir a tipo datetime |
+| `pd.qcut()` | Discretización por cuantiles |
+| `df.copy()` | Copia independiente |
+| `df.dropna()` | Eliminar filas/columnas con NaN |
+| `df.isnull().sum()` | Conteo de nulos por columna |
+| `df.fillna()` | Rellenar NaN con valor o método |
+| `df.ffill()` / `df.bfill()` | Forward/Backward fill |
+| `df.describe()` | Estadísticos descriptivos |
+| `df.median()` | Mediana por columna |
+| `df.skew()` | Asimetría |
+| `df.kurtosis()` | Curtosis |
+| `df.select_dtypes()` | Filtrar columnas por tipo |
+| `df.groupby()` | Agrupación |
+| `df.groupby().transform()` | Aplicar función por grupo, manteniendo índice |
+| `df.pivot()` | Tabla pivote |
+| `df.swaplevel()` | Intercambiar niveles en MultiIndex |
+| `df.sort_index()` | Ordenar por índice |
+| `df.set_index()` | Definir columna como índice |
+| `df.drop()` | Eliminar columnas o filas |
+| `df.reset_index()` | Convertir índice a columnas |
+| `df.loc[]` | Selección por etiqueta |
+| `df.iloc[]` | Selección por posición |
+| `df.melt()` | De formato ancho a largo |
+| `df.sample()` | Muestra aleatoria de filas |
+| `df.items()` | Iteración `(col_name, Series)` |
+
+### Ejemplos de código real
+
+```python
+# Imputación por grupo (Group-Specific Mean)
+df_bi['Imp_Group'] = df_bi['Height'].fillna(
+    df_bi.groupby('Gender')['Height'].transform('mean')
+)
+
+# Pivot con MultiIndex para comparar estadísticos por origen
+(shapiro_df_origin
+    .round(3)
+    .pivot(index='Variable', columns='Origin', values=['Statistic', 'p-value', 'Normality'])
+    .swaplevel(0, 1, axis=1)
+    .sort_index(axis=1, level=0)
+)
+
+# Selección por IndexSlice en MultiIndex
+welch_df.loc[pd.IndexSlice[:, "USA vs Japan"], :].reset_index().drop(columns=["Pair"])
+```
+
+---
+
+## 3. `seaborn` (importado como `sns`)
+
+Visualizaciones estadísticas de alto nivel sobre Matplotlib.
+
+| Función | Uso |
+|---|---|
+| `sns.histplot()` | Histograma con KDE opcional |
+| `sns.kdeplot()` | Estimación de densidad kernel |
+| `sns.scatterplot()` | Gráfico de dispersión |
+| `sns.regplot()` | Dispersión + regresión |
+| `sns.residplot()` | Residuos de regresión (lowess) |
+| `sns.boxplot()` | Caja y bigotes |
+| `sns.barplot()` | Barras con intervalos de confianza |
+| `sns.lineplot()` | Línea con banda de confianza |
+| `sns.color_palette()` | Paleta de colores personalizada |
+| `sns.set_theme()` | Tema global |
+| `sns.set_style()` | Estilo de fondo |
+| `sns.set_context()` | Escala de contexto |
+
+### Ejemplos de código real
+
+```python
+# Histograma + KDE en grid
+sns.histplot(x=transformed_data, bins=30, stat="density", linewidth=0,
+             color=colors[col_idx], alpha=0.6, ax=ax[row_idx, col_idx])
+
+# KDE superpuesto (comparación de distribuciones)
+sns.kdeplot(X.melt(var_name="Distribution", value_name="X"),
+            x="X", hue="Distribution", bw_adjust=2.5,
+            alpha=0.5, fill=True, legend=False, palette=palette, ax=ax[i])
+
+# Scatter + línea de regresión por categoría
+sns.scatterplot(data=df, x='RPM', y='Temperature',
+                hue='Label', style='Label', s=70, palette='Set1', alpha=0.8)
+
+# Barplot temporal con IC al 99%
+sns.barplot(data=df, x="model_year", y="mpg", hue="origin",
+            estimator="mean", errorbar=("ci", 99),
+            err_kws={"color": "darkgrey"}, palette=colors_map, ax=axes[0])
+
+# Residuos con lowess
+sns.residplot(x=G, y=power, lowess=True, color='purple', ax=ax[1])
+```
+
+---
+
+## 4. `matplotlib.pyplot` (importado como `plt`)
+
+Motor de renderizado de gráficos.
+
+| Función / Método | Uso |
+|---|---|
+| `plt.subplots()` | Crear figura y ejes |
+| `plt.figure()` | Crear figura |
+| `plt.show()` | Mostrar figura |
+| `plt.tight_layout()` | Ajuste automático de espaciado |
+| `plt.suptitle()` | Título de figura completa |
+| `plt.style.use()` | Estilo global |
+| `plt.rcParams[]` | Parámetros globales |
+| `ax.set_title()` | Título de eje |
+| `ax.set_xlabel()` / `ax.set_ylabel()` | Etiquetas de ejes |
+| `ax.set_xlim()` / `ax.set_ylim()` | Límites de ejes |
+| `ax.set_xticks()` / `ax.set_yticks()` | Ticks manuales |
+| `ax.axvline()` | Línea vertical |
+| `ax.axhline()` | Línea horizontal |
+| `ax.annotate()` | Anotación con flecha |
+| `ax.text()` | Texto en coordenadas del eje |
+| `ax.scatter()` | Puntos de dispersión |
+| `ax.hist()` | Histograma base |
+| `ax.plot()` | Línea |
+| `ax.bar()` | Barras |
+| `ax.legend()` | Leyenda |
+| `fig.legend()` | Leyenda de figura completa |
+| `ax.yaxis.tick_right()` | Mover ticks al lado derecho |
+
+### Ejemplos de código real
+
+```python
+fig, ax = plt.subplots(len(raw.columns), len(transformations), figsize=(18, 8))
+
+ax.axvline(ci_np_lower, color='red', linestyle='dashed', linewidth=2)
+ax.axvline(ci_np_upper, color='red', linestyle='dashed', linewidth=2)
+
+axes[0].annotate('Global Mean lands in the valley!',
+                 xy=(global_mean, 0.04), xytext=(global_mean, 0.08),
+                 arrowprops=dict(facecolor='black', shrink=0.05), ha='center')
+```
+
+---
+
+## 5. `matplotlib.ticker`
+
+Control fino de ticks y formatos de ejes.
+
+| Función | Uso |
+|---|---|
+| `ticker.MaxNLocator(n)` | Máximo n ticks automáticos |
+| `ticker.FuncFormatter(fn)` | Formato personalizado vía función |
+
+```python
+ax[row_idx, col_idx].xaxis.set_major_locator(ticker.MaxNLocator(4))
+ax[j, i].yaxis.set_major_formatter(
+    ticker.FuncFormatter(lambda x, _: f'{x:.0e}' if x != 0 else '0')
+)
+```
+
+---
+
+## 6. `matplotlib.patches`
+
+```python
+# Crear parches de color para leyendas manuales
+h = [patches.Patch(facecolor=colors[i], label=x) for i, x in enumerate(raw.columns)]
+fig.legend(handles=h, loc="center right", fancybox=True, frameon=False,
+           bbox_to_anchor=(1.11, 0.5), title="Distribution")
+```
+
+---
+
+## 7. `scipy.stats`
+
+Distribuciones de probabilidad y tests estadísticos.
+
+| Función | Uso |
+|---|---|
+| `stats.skewnorm.rvs()` | Muestras de distribución normal asimétrica |
+| `stats.bernoulli.pmf()` | PMF Bernoulli |
+| `stats.binom.pmf()` | PMF Binomial |
+| `stats.poisson.pmf()` | PMF Poisson |
+| `stats.norm.pdf()` | PDF Normal |
+| `stats.expon.pdf()` | PDF Exponencial |
+| `stats.gamma.pdf()` / `.ppf()` | PDF/cuantil Gamma |
+| `stats.lognorm.pdf()` / `.ppf()` | PDF/cuantil Log-Normal |
+| `stats.uniform.pdf()` | PDF Uniforme |
+| `stats.t.pdf()` | PDF t-Student |
+| `stats.chi2.pdf()` / `.ppf()` | PDF/cuantil Chi-cuadrado |
+| `stats.f.pdf()` / `.ppf()` | PDF/cuantil F |
+| `stats.beta.pdf()` | PDF Beta |
+| `stats.nbinom.pmf()` | PMF Binomial Negativa |
+| `stats.weibull_min.ppf()` | Cuantil Weibull |
+| `stats.shapiro()` | Test de normalidad Shapiro-Wilk |
+| `stats.levene()` | Test de igualdad de varianzas |
+| `stats.f_oneway()` | ANOVA de una vía |
+| `stats.mannwhitneyu()` | Test Mann-Whitney U |
+| `stats.ks_2samp()` | Test Kolmogorov-Smirnov bicuestral |
+| `stats.zscore()` | Z-scores |
+| `stats.boxcox()` | Transformación Box-Cox |
+| `stats.yeojohnson()` | Transformación Yeo-Johnson |
+
+### Ejemplos de código real
+
+```python
+# Shapiro-Wilk por columna y por grupo
+stat, p_value = stats.shapiro(df[col])
+
+# ANOVA + pairwise
+f_stat, f_p = stats.f_oneway(groups['USA'][col], groups['Europe'][col], groups['Japan'][col])
+u_stat, u_p = stats.mannwhitneyu(groups[g1][col], groups[g2][col], alternative='two-sided')
+ks_stat, ks_p = stats.ks_2samp(s1, s2)
+
+# Umbral chi2 para Mahalanobis
+threshold_m = np.sqrt(chi2.ppf(1 - 0.001, df=2))
+
+# Distribución en gráfica
+x = np.linspace(x_min, x_max, 500)
+density = stats.norm.pdf(x, mu, sigma)
+```
+
+---
+
+## 8. `scipy.stats.mstats`
+
+```python
+from scipy.stats.mstats import winsorize
+# Winsorización: cortar colas al 5% inferior y superior
+x_win = winsorize(x, limits=[0.05, 0.05])
+```
+
+---
+
+## 9. `scipy.special`
+
+```python
+from scipy.special import rel_entr
+# Divergencia KL usando entropía relativa
+kl = np.sum(rel_entr(p, q))
+```
+
+---
+
+## 10. `sklearn.preprocessing`
+
+Transformadores de características.
+
+| Clase | Uso |
+|---|---|
+| `StandardScaler` | Z-score: media=0, std=1 |
+| `MinMaxScaler` | Escala al rango [0,1] |
+| `RobustScaler` | Escala con mediana e IQR |
+| `QuantileTransformer` | Mapea a distribución normal/uniforme |
+| `PowerTransformer` | Box-Cox o Yeo-Johnson |
+| `KBinsDiscretizer` | Discretización en bins |
+| `OneHotEncoder` | Codificación one-hot |
+| `LabelEncoder` | Codificación ordinal compacta |
+| `OrdinalEncoder` | Codificación ordinal configurable |
+| `PolynomialFeatures` | Features polinomiales |
+
+### Ejemplos de código real
+
+```python
+# Box-Cox con sklearn
+pt_box = PowerTransformer(method='box-cox')
+x_box = pt_box.fit_transform(x.reshape(-1, 1)).flatten()
+
+# Yeo-Johnson (soporta negativos)
+pt_yeo = PowerTransformer(method='yeo-johnson')
+x_yeo = pt_yeo.fit_transform(x.reshape(-1, 1)).flatten()
+
+# Binning uniforme
+binner = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='uniform')
+x_bin = binner.fit_transform(x.reshape(-1, 1)).flatten()
+
+# Binning por cuantiles
+binner_q = KBinsDiscretizer(n_bins=8, encode='ordinal', strategy='quantile')
+x_bin_q = binner_q.fit_transform(x.reshape(-1, 1)).flatten()
+```
+
+---
+
+## 11. `sklearn.impute`
+
+| Clase | Uso |
+|---|---|
+| `SimpleImputer` | Media, mediana, moda, constante |
+| `KNNImputer` | Imputación por K vecinos más cercanos |
+| `IterativeImputer` | MICE — imputación multivariada |
+
+```python
+# Media y mediana
+imputer_mean   = SimpleImputer(strategy='mean')
+imputer_median = SimpleImputer(strategy='median')
+imputer_mode   = SimpleImputer(strategy='most_frequent')
+df['col'] = imputer_mean.fit_transform(df[['col']])
+
+# KNN con 2 vecinos
+knn_imputer = KNNImputer(n_neighbors=2)
+df[numerical_cols] = knn_imputer.fit_transform(df[numerical_cols])
+
+# MICE (requiere enable_iterative_imputer)
+from sklearn.experimental import enable_iterative_imputer
+imp_mice = IterativeImputer(random_state=42)
+df_mice = pd.DataFrame(imp_mice.fit_transform(df), columns=df.columns)
+```
+
+---
+
+## 12. `sklearn.ensemble`
+
+| Clase | Uso |
+|---|---|
+| `IsolationForest` | Detección de anomalías por árboles |
+| `RandomForestRegressor` | Regresor de bosque aleatorio |
+
+```python
+iso_forest = IsolationForest(contamination=0.03, random_state=42)
+iso_preds  = iso_forest.fit_predict(X_scaled)   # 1=normal, -1=anomalía
+
+rf = RandomForestRegressor(random_state=42)
+rf.fit(X_train, y_train)
+rmse = np.sqrt(mean_squared_error(y_test, rf.predict(X_test)))
+```
+
+---
+
+## 13. `sklearn.neighbors`
+
+```python
+from sklearn.neighbors import LocalOutlierFactor
+lof = LocalOutlierFactor(n_neighbors=20, contamination=0.03)
+lof_preds = lof.fit_predict(X_scaled)
+```
+
+---
+
+## 14. `sklearn.svm`
+
+```python
+from sklearn.svm import OneClassSVM
+ocsvm = OneClassSVM(kernel='rbf', gamma='scale', nu=0.03)
+ocsvm_preds = ocsvm.fit_predict(X_scaled)
+```
+
+---
+
+## 15. `sklearn.linear_model`
+
+| Clase | Uso |
+|---|---|
+| `LinearRegression` | Regresión lineal OLS |
+| `LogisticRegression` | Regresión logística |
+
+```python
+model = LinearRegression().fit(X, y)
+slope = model.coef_[0]
+preds = model.predict(x_range)
+
+mech_model = LogisticRegression()
+mech_model.fit(df[['X']], df['is_missing'])
+propensity = mech_model.predict_proba(df[['X']])[:, 1]
+```
+
+---
+
+## 16. `sklearn.model_selection`
+
+```python
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+```
+
+---
+
+## 17. `sklearn.metrics`
+
+```python
+from sklearn.metrics import mean_squared_error
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+```
+
+---
+
+## 18. `sklearn.datasets`
+
+```python
+from sklearn.datasets import fetch_california_housing
+data = fetch_california_housing(as_frame=True).frame
+```
+
+---
+
+## 19. `sklearn.compose` y `sklearn.pipeline`
+
+```python
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('detector', IsolationForest(contamination=0.03, random_state=42))
+])
+```
+
+---
+
+## 20. `statsmodels.stats.weightstats`
+
+```python
+from statsmodels.stats.weightstats import ttest_ind
+# Welch's t-test (no asume varianzas iguales)
+t_stat, t_p, _ = ttest_ind(group1, group2, usevar='unequal')
+```
+
+---
+
+## 21. `ipywidgets`
+
+```python
+import ipywidgets as widgets
+from ipywidgets import interact
+
+@interact(
+    variable=widgets.Dropdown(options=numeric_vars, value=numeric_vars[0], description="Variable"),
+    bins=widgets.IntSlider(value=20, min=5, max=80, step=1, description="Bins"),
+    bw_adjust=widgets.FloatSlider(value=1.0, min=0.2, max=3.0, step=0.1, description="bw_adjust")
+)
+def histplot_widget(variable, bins, bw_adjust):
+    plt.figure(figsize=(9, 5))
+    sns.histplot(data=df, x=variable, bins=bins, kde=True,
+                 kde_kws={"bw_adjust": bw_adjust}, color="royalblue")
+    plt.show()
+```
+
+---
+
+## 22. `warnings`
+
+```python
+import warnings
+warnings.filterwarnings("ignore")
+```

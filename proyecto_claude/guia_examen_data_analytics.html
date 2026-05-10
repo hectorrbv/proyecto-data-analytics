@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Guía Examen - Data Analytics 2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+  :root {
+    --azul: #1a3a5c;
+    --azul-claro: #2563a8;
+    --verde: #0d6e4e;
+    --rojo: #b91c1c;
+    --naranja: #c2410c;
+    --amarillo-bg: #fef9c3;
+    --gris-bg: #f1f5f9;
+    --borde: #cbd5e1;
+    --texto: #0f172a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    color: var(--texto);
+    background: white;
+    padding: 20px 28px;
+    line-height: 1.5;
+  }
+
+  /* ENCABEZADO */
+  .header {
+    border-left: 6px solid var(--azul);
+    padding: 8px 14px;
+    margin-bottom: 18px;
+    background: var(--gris-bg);
+  }
+  .header h1 { font-size: 20px; color: var(--azul); font-weight: 700; }
+  .header p { font-size: 11px; color: #475569; margin-top: 3px; }
+
+  /* SECCIONES */
+  h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    background: var(--azul);
+    padding: 5px 10px;
+    margin: 18px 0 8px 0;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--azul-claro);
+    margin: 12px 0 5px 0;
+    border-bottom: 2px solid var(--azul-claro);
+    padding-bottom: 2px;
+  }
+
+  h4 {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--verde);
+    margin: 10px 0 4px 0;
+  }
+
+  /* TABLAS */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 12px 0;
+    font-size: 10.8px;
+  }
+
+  th {
+    background: var(--azul);
+    color: white;
+    padding: 5px 7px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10.5px;
+  }
+
+  td {
+    padding: 4px 7px;
+    border: 1px solid var(--borde);
+    vertical-align: top;
+  }
+
+  tr:nth-child(even) td { background: var(--gris-bg); }
+  tr:hover td { background: #e0f2fe; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .badge-param { background: #dbeafe; color: #1e40af; }
+  .badge-noparam { background: #dcfce7; color: #166534; }
+  .badge-critic { background: #fee2e2; color: #991b1b; }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-ok { background: #d1fae5; color: #065f46; }
+
+  /* ALERTAS */
+  .alerta {
+    border-left: 4px solid var(--rojo);
+    background: #fff1f2;
+    padding: 6px 10px;
+    margin: 6px 0;
+    font-size: 10.8px;
+  }
+  .alerta strong { color: var(--rojo); }
+
+  .tip {
+    border-left: 4px solid var(--verde);
+    background: #f0fdf4;
+    padding: 6px 10px;
+    margin: 6px 0;
+    font-size: 10.8px;
+  }
+  .tip strong { color: var(--verde); }
+
+  .info {
+    border-left: 4px solid var(--azul-claro);
+    background: #eff6ff;
+    padding: 6px 10px;
+    margin: 6px 0;
+    font-size: 10.8px;
+  }
+
+  /* FORMULA */
+  .formula {
+    font-family: 'IBM Plex Mono', monospace;
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 6px 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+    font-size: 10.5px;
+    display: block;
+  }
+
+  /* COLUMNAS */
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0; }
+  .cols3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 6px 0; }
+
+  .card {
+    border: 1px solid var(--borde);
+    border-radius: 4px;
+    padding: 8px;
+    background: var(--gris-bg);
+  }
+  .card h4 { margin-top: 0; }
+
+  /* PREGUNTAS PRÁCTICAS */
+  .pregunta {
+    background: var(--amarillo-bg);
+    border: 1px solid #f59e0b;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 8px 0;
+  }
+  .pregunta .q { font-weight: 700; color: #92400e; margin-bottom: 4px; }
+  .pregunta .a { color: #1c1917; }
+
+  /* BOLD KEYWORDS */
+  strong { color: var(--azul); }
+  em { color: var(--naranja); font-style: normal; font-weight: 600; }
+
+  /* IMPRIMIR */
+  @media print {
+    body { padding: 10px 15px; font-size: 10.5px; }
+    h2 { margin: 14px 0 6px 0; }
+    .pregunta { break-inside: avoid; }
+    table { break-inside: avoid; }
+    .card { break-inside: avoid; }
+  }
+
+  .page-break { page-break-before: always; }
+
+  ul, ol { padding-left: 16px; margin: 4px 0; }
+  li { margin: 2px 0; }
+
+  .num-tag {
+    display: inline-block;
+    background: var(--azul);
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 18px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 GUÍA DE EXAMEN — Data Analytics 2: Inferencia y Probabilidad</h1>
+  <p>Temas: Pruebas estadísticas · Distribuciones · Correlaciones · Multicolinealidad · Bootstrapping · LOF · EDA · eCDF</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     0. CONCEPTOS BASE RAPIDÍSIMOS
+══════════════════════════════════════════════════════════════ -->
+<h2>0 · Conceptos Base (los más básicos)</h2>
+
+<div class="cols3">
+  <div class="card">
+    <h4>Población vs Muestra</h4>
+    <ul>
+      <li><strong>Población (N)</strong>: todos los elementos. Tiene parámetros constantes (µ, σ²) pero <em>desconocidos</em></li>
+      <li><strong>Muestra (n)</strong>: subconjunto. Se describe con <strong>estadísticos</strong> (X̄, S²) que son variables aleatorias</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>H₀ vs Hₐ</h4>
+    <ul>
+      <li><strong>H₀</strong>: no hay diferencia / no hay relación / todo es igual. <em>Nunca se "acepta"</em>, solo se rechaza o no se rechaza</li>
+      <li><strong>Hₐ</strong>: sí hay diferencia / hay relación</li>
+      <li><strong>p &lt; α</strong>: rechazar H₀ → evidencia de diferencia</li>
+      <li><strong>p ≥ α</strong>: no hay evidencia suficiente para rechazar H₀</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Ruido / Anomalía / Error</h4>
+    <ul>
+      <li><strong>Ruido</strong>: variación aleatoria inherente a los datos, sin patrón</li>
+      <li><strong>Anomalía (outlier)</strong>: punto que se desvía significativamente del patrón general, puede ser real o un error</li>
+      <li><strong>Error</strong>: dato incorrecto por medición, captura o proceso</li>
+    </ul>
+  </div>
+</div>
+
+<div class="alerta"><strong>⚠️ Error conceptual crítico:</strong> "Aceptamos H₀" es INCORRECTO. Lo correcto: <em>"No hay evidencia estadística suficiente para rechazar H₀"</em>. El p-value NO es la probabilidad de que H₀ sea verdadera; es la probabilidad de ver datos tan extremos <em>si H₀ fuera cierta</em>.</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     1. TABLA MAESTRA PRUEBAS ESTADÍSTICAS
+══════════════════════════════════════════════════════════════ -->
+<h2>1 · Tabla Maestra — Pruebas Estadísticas</h2>
+
+<table>
+  <tr>
+    <th>Prueba</th>
+    <th>Tipo</th>
+    <th>H₀ (qué asume)</th>
+    <th>Para qué sirve / cuándo usar</th>
+    <th>Supuestos clave</th>
+    <th>Si p &lt; 0.05</th>
+    <th>Si p ≥ 0.05</th>
+  </tr>
+  <tr>
+    <td><strong>Shapiro-Wilk</strong></td>
+    <td><span class="badge badge-param">Normalidad</span></td>
+    <td>Los datos siguen una distribución Normal</td>
+    <td>Verificar normalidad <em>antes</em> de usar t-test o ANOVA. Indispensable con n &lt; 50</td>
+    <td>n pequeño (&lt; 2000). Para n grande usar KS o Q-Q Plot visual</td>
+    <td>❌ Los datos NO son normales → usar prueba no paramétrica</td>
+    <td>✅ No se rechaza normalidad → puedes usar pruebas paramétricas</td>
+  </tr>
+  <tr>
+    <td><strong>Levene</strong></td>
+    <td><span class="badge badge-param">Varianzas</span></td>
+    <td>Las varianzas de los grupos son iguales (homocedasticidad)</td>
+    <td>Saber si usar t-test clásico o Welch. Siempre antes del t-test</td>
+    <td>Grupos independientes</td>
+    <td>❌ Varianzas distintas → usar <strong>Welch</strong> (no el t-test clásico)</td>
+    <td>✅ Varianzas iguales → usar t-test estándar</td>
+  </tr>
+  <tr>
+    <td><strong>t-Student / Welch</strong></td>
+    <td><span class="badge badge-param">Paramétrica</span></td>
+    <td>Las medias de 2 grupos son iguales (µ₁ = µ₂)</td>
+    <td>Comparar medias de <strong>2 grupos independientes</strong>. Welch = versión robusta a varianzas desiguales</td>
+    <td>Normalidad (Shapiro-Wilk), datos continuos. <em>Con n grande el TCL ayuda pero no resuelve asimetría</em></td>
+    <td>Medias son distintas entre grupos</td>
+    <td>No hay evidencia de diferencia en medias</td>
+  </tr>
+  <tr>
+    <td><strong>U de Mann-Whitney</strong></td>
+    <td><span class="badge badge-noparam">No paramétrica</span></td>
+    <td>P(X_A &lt; X_B) = 0.5 → distribuciones idénticas en tendencia central</td>
+    <td>Comparar 2 grupos cuando los datos son <strong>asimétricos, ordinales o tienen outliers extremos</strong>. Alternativa al t-test sin asumir normalidad</td>
+    <td>Ninguno de distribución. Funciona con rangos</td>
+    <td>Un grupo tiende a tener valores sistemáticamente mayores</td>
+    <td>No hay diferencia en distribución entre grupos</td>
+  </tr>
+  <tr>
+    <td><strong>ANOVA</strong></td>
+    <td><span class="badge badge-param">Paramétrica</span></td>
+    <td>Todas las medias de los grupos son iguales (µ₁ = µ₂ = ... = µk)</td>
+    <td>Comparar medias de <strong>3 o más grupos</strong> simultáneamente</td>
+    <td>Normalidad en cada grupo, homocedasticidad (Levene), independencia</td>
+    <td>Al menos un grupo tiene media distinta (no dice cuál, requiere post-hoc como Tukey)</td>
+    <td>Todas las medias son iguales</td>
+  </tr>
+  <tr>
+    <td><strong>Kolmogorov-Smirnov (KS)</strong></td>
+    <td><span class="badge badge-noparam">No paramétrica</span></td>
+    <td>Dos distribuciones son idénticas (o una muestra sigue cierta distribución)</td>
+    <td>Comparar 2 distribuciones completas, o verificar si una muestra sigue una distribución teórica. Bueno para n grande</td>
+    <td>Datos continuos. Compara eCDF vs distribución teórica</td>
+    <td>Las distribuciones son significativamente distintas</td>
+    <td>No hay evidencia de diferencia entre distribuciones</td>
+  </tr>
+  <tr>
+    <td><strong>Chi-Cuadrada (χ²)</strong></td>
+    <td><span class="badge badge-noparam">No paramétrica</span></td>
+    <td>Las variables categóricas son independientes entre sí</td>
+    <td>Probar si dos variables <strong>categóricas</strong> están relacionadas. Ej: tipo de tarjeta vs tipo de fraude</td>
+    <td><em>⚠️ Todas las frecuencias esperadas E_ij ≥ 5.</em> Si no, el estadístico es inválido → usar Fisher Exacta</td>
+    <td>Las variables NO son independientes → hay asociación</td>
+    <td>No hay evidencia de asociación entre variables</td>
+  </tr>
+  <tr>
+    <td><strong>Fisher Exacta</strong></td>
+    <td><span class="badge badge-noparam">No paramétrica</span></td>
+    <td>Independencia entre variables categóricas</td>
+    <td>Alternativa a χ² cuando hay celdas con E_ij &lt; 5 o muestras pequeñas</td>
+    <td>No necesita n grande. Exacta, no asintótica</td>
+    <td colspan="2">Misma interpretación que χ²</td>
+  </tr>
+</table>
+
+<div class="cols2">
+  <div class="alerta"><strong>χ² inválido cuando E_ij &lt; 5:</strong> La fórmula χ² = Σ[(O-E)²/E] explota con E pequeños → el p-value no es confiable. Solución: agrupar categorías o usar Fisher Exacta.</div>
+  <div class="tip"><strong>Flujo de decisión para 2 grupos:</strong> ① Shapiro-Wilk → Normal? ② Levene → Varianzas iguales? → t-Student. Si asimétrico/outliers → <strong>Mann-Whitney U</strong>. Si 3+ grupos → ANOVA.</div>
+</div>
+
+<span class="formula">U_A = n_A · n_B + [n_A(n_A+1)/2] - R_A        donde R_A = suma de rangos del grupo A en muestra combinada</span>
+<span class="formula">χ² = Σ_i Σ_j [(O_ij - E_ij)² / E_ij]        E_ij = (fila_i_total × col_j_total) / n_total</span>
+
+<!-- ══════════════════════════════════════════════════════════════
+     2. DISTRIBUCIONES DE PROBABILIDAD
+══════════════════════════════════════════════════════════════ -->
+<h2>2 · Distribuciones de Probabilidad</h2>
+
+<table>
+  <tr>
+    <th>Distribución</th>
+    <th>Tipo</th>
+    <th>Variable que modela</th>
+    <th>Cuándo elegirla — señales clave</th>
+    <th>Parámetros</th>
+    <th>E[X] / Var[X]</th>
+    <th>Ejemplos en datos</th>
+  </tr>
+  <tr>
+    <td><strong>Binomial</strong></td>
+    <td><span class="badge badge-param">Discreta</span></td>
+    <td>Número de <em>éxitos</em> en n ensayos de Bernoulli</td>
+    <td>n fijo, cada intento es éxito/fallo, independientes, p constante. Tiene <em>techo: máximo n</em></td>
+    <td>n (ensayos), p (prob éxito)</td>
+    <td>np / np(1-p)</td>
+    <td>Píxeles defectuosos en 500 sensores, clics en anuncio de 100 usuarios</td>
+  </tr>
+  <tr>
+    <td><strong>Poisson</strong></td>
+    <td><span class="badge badge-param">Discreta</span></td>
+    <td>Conteo de eventos en intervalo fijo de tiempo/espacio</td>
+    <td>Eventos raros, independientes, sin techo natural. <em>E[X] = Var[X] = λ</em></td>
+    <td>λ (tasa promedio)</td>
+    <td>λ / λ</td>
+    <td>Fraudes por hora, peticiones a API por minuto, errores de servidor por día</td>
+  </tr>
+  <tr>
+    <td><strong>Normal (Gaussiana)</strong></td>
+    <td><span class="badge badge-noparam">Continua</span></td>
+    <td>Variables simétricas, distribución de errores</td>
+    <td>Datos simétricos, campana, sin cola extrema. Errores de medición. Muchos procesos por TCL</td>
+    <td>µ (media), σ² (varianza)</td>
+    <td>µ / σ²</td>
+    <td>Errores de regresión lineal, alturas de personas, temperaturas</td>
+  </tr>
+  <tr>
+    <td><strong>Exponencial</strong></td>
+    <td><span class="badge badge-noparam">Continua</span></td>
+    <td>Tiempo entre eventos en proceso Poisson</td>
+    <td>Variable continua ≥ 0, propiedad <em>sin memoria</em>: P(esperar + t | ya esperé s) = P(esperar t). Cola a la derecha</td>
+    <td>λ (tasa)</td>
+    <td>1/λ / 1/λ²</td>
+    <td>Tiempo hasta 1ª caída del servidor, tiempo entre transacciones fraudulentas</td>
+  </tr>
+  <tr>
+    <td><strong>Gamma</strong></td>
+    <td><span class="badge badge-noparam">Continua</span></td>
+    <td>Tiempo hasta que ocurran α eventos</td>
+    <td>Generalización de la exponencial. Cola derecha más flexible. Suma de exponenciales</td>
+    <td>α (forma/shape), λ (tasa)</td>
+    <td>α/λ / α/λ²</td>
+    <td>Tiempo de resolución de tickets, carga total en servidores, montos de reclamos de seguros</td>
+  </tr>
+  <tr>
+    <td><strong>Log-Normal</strong></td>
+    <td><span class="badge badge-noparam">Continua</span></td>
+    <td>Variables con sesgo positivo extremo</td>
+    <td>Datos siempre positivos + cola derecha muy larga (mayoría pequeños, pocos enormes). Si ln(X) ~ Normal, entonces X ~ Lognormal</td>
+    <td>µ, σ (de ln(X))</td>
+    <td>exp(µ+σ²/2) / —</td>
+    <td>Ingresos/salarios, tiempos de latencia con picos, precios de activos</td>
+  </tr>
+  <tr>
+    <td><strong>Uniforme</strong></td>
+    <td><span class="badge badge-noparam">Continua</span></td>
+    <td>Fenómenos donde todos los valores en [a,b] son igualmente probables</td>
+    <td>Sin preferencia por ningún valor, todos equiprobables en un rango</td>
+    <td>a (mín), b (máx)</td>
+    <td>(a+b)/2 / (b-a)²/12</td>
+    <td>Número aleatorio generado por computadora, ángulo de llegada de partícula</td>
+  </tr>
+</table>
+
+<div class="tip"><strong>Regla de oro para elegir distribución:</strong> ¿Los datos pueden ser negativos? → Normal/Uniforme. ¿Son conteos enteros? → Binomial (techo) o Poisson (sin techo). ¿Son tiempos de espera? → Exponencial (1 evento) o Gamma (k eventos). ¿Son valores positivos con cola enorme a la derecha? → <strong>Lognormal</strong>.</div>
+
+<div class="cols2">
+  <div class="info">
+    <strong>Binomial vs Poisson:</strong> Binomial tiene límite (n ensayos máx). Poisson no tiene techo. Cuando n es muy grande y p muy pequeño, Binomial ≈ Poisson con λ = np.
+  </div>
+  <div class="info">
+    <strong>Exponencial vs Gamma:</strong> Exponencial = tiempo hasta 1 evento. Gamma = tiempo hasta α eventos (suma de α exponenciales independientes).
+  </div>
+</div>
+
+<span class="formula">Binomial: P(X=k) = C(n,k)·p^k·(1-p)^(n-k)    |    Poisson: P(X=k) = (λ^k · e^{-λ}) / k!</span>
+<span class="formula">Lognormal: Mediana = e^µ  (parámetro de tendencia central, no la media — ésta se infla por outliers)</span>
+
+<!-- ══════════════════════════════════════════════════════════════
+     3. CORRELACIONES
+══════════════════════════════════════════════════════════════ -->
+<h2>3 · Correlaciones — Pearson vs Spearman vs Kendall</h2>
+
+<table>
+  <tr>
+    <th>Coeficiente</th>
+    <th>Mide</th>
+    <th>Supuestos necesarios</th>
+    <th>Escala de datos</th>
+    <th>Empates</th>
+    <th>Cuándo usarlo</th>
+    <th>Cuándo NO usarlo</th>
+  </tr>
+  <tr>
+    <td><strong>Pearson (r)</strong></td>
+    <td>Asociación <em>lineal</em> entre dos variables continuas</td>
+    <td>Normalidad bivariada, relación lineal, sin outliers extremos, escala de intervalo/razón</td>
+    <td>Continua, intervalos iguales</td>
+    <td>Los ignora (asume continuidad)</td>
+    <td>Altura vs Peso, temperatura vs ventas de helado (relación lineal clara)</td>
+    <td>Datos ordinales (estrellas 1-5), relación curva, muchos empates, outliers extremos</td>
+  </tr>
+  <tr>
+    <td><strong>Spearman (ρ)</strong></td>
+    <td>Asociación <em>monótona</em> (no necesariamente lineal)</td>
+    <td>Solo relación monótona (si X sube, Y sube o siempre baja). Trabaja con rangos</td>
+    <td>Ordinal o continua</td>
+    <td>Asigna rangos promedio → con miles de empates se distorsiona</td>
+    <td>Relación no lineal pero monótona, datos ordinales, outliers presentes</td>
+    <td>Miles de empates (prefiere Kendall), datos con reversiones complejas</td>
+  </tr>
+  <tr>
+    <td><strong>Kendall (τ)</strong></td>
+    <td>Probabilidad de <em>concordancia</em> entre pares: τ = P(concordante) − P(discordante)</td>
+    <td>Solo relación monótona. Más robusto a empates que Spearman</td>
+    <td>Ordinal o continua</td>
+    <td><em>Penaliza empates directamente en el denominador</em> → más estable</td>
+    <td>Muchos empates (ej: calificaciones 1-5), datos ordinales con pocos valores únicos, EDA exploratorio</td>
+    <td>Cuando se necesita comparabilidad con literatura que usa Pearson/Spearman</td>
+  </tr>
+</table>
+
+<span class="formula">τ_b = (C - D) / √[(C+D+E_X)(C+D+E_Y)]    donde C=concordantes, D=discordantes, E_X=empates en X, E_Y=empates en Y</span>
+
+<div class="alerta"><strong>Pearson con datos ordinales/empates = ERROR técnico:</strong> (1) Viola supuesto de linealidad si la relación es curva. (2) Viola supuesto de escala de intervalo: la distancia entre 3 y 4 estrellas no es necesariamente igual a entre 1 y 2. (3) Miles de empates en "4" comprimen la varianza artificialmente.</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     4. MULTICOLINEALIDAD Y VIF
+══════════════════════════════════════════════════════════════ -->
+<h2>4 · Multicolinealidad — VIF</h2>
+
+<div class="cols2">
+  <div>
+    <h3>¿Qué es y por qué importa?</h3>
+    <p>Cuando una variable predictora X₁ puede ser predicha casi perfectamente por otras variables (X₂, X₃), la matriz X'X se vuelve <em>casi singular</em> (det → 0). Consecuencias:</p>
+    <ul>
+      <li>Los coeficientes β̂ son <strong>inestables</strong>: pequeños cambios en datos voltean signos</li>
+      <li>Los errores estándar de β̂ se <strong>inflan</strong> → t-tests no significativos aunque la variable sí importe</li>
+      <li>La fórmula β̂ = (X'X)⁻¹X'y falla porque la inversa es numéricamente inestable</li>
+    </ul>
+    <span class="formula">VIF_i = 1 / (1 - R²_i)</span>
+    <p>donde R²_i es el R² de la regresión auxiliar de X_i contra todas las demás predictoras.</p>
+    <span class="formula">Ej: R² = 0.94 → VIF = 1/(1-0.94) = 1/0.06 ≈ 16.67 ⚠️ SEVERO</span>
+  </div>
+  <div>
+    <h3>Umbrales y decisiones</h3>
+    <table>
+      <tr><th>VIF</th><th>Diagnóstico</th><th>Acción</th></tr>
+      <tr><td>1 – 5</td><td><span class="badge badge-ok">✅ Normal</span></td><td>Sin problema</td></tr>
+      <tr><td>5 – 10</td><td><span class="badge badge-warn">⚠️ Moderado</span></td><td>Investigar, monitorear</td></tr>
+      <tr><td>&gt; 10</td><td><span class="badge badge-critic">❌ Severo</span></td><td>Actuar</td></tr>
+    </table>
+    <h4>Opciones cuando VIF &gt; 10:</h4>
+    <ul>
+      <li><strong>Eliminar la variable</strong>: si R²_i es alto, la variable ya está contenida en las demás y no agrega información nueva</li>
+      <li><strong>PCA</strong>: crear componentes ortogonales que no correlacionen entre sí</li>
+      <li><strong>Ridge (L2)</strong>: regularización que estabiliza coeficientes sin eliminar variables</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     5. BOOTSTRAPPING
+══════════════════════════════════════════════════════════════ -->
+<h2>5 · Bootstrapping</h2>
+
+<div class="cols2">
+  <div class="card">
+    <h4>No Paramétrico (remuestreo directo)</h4>
+    <p><strong>Cuándo:</strong> n pequeño, outliers, distribución desconocida, no puedes asumir normalidad.</p>
+    <ol>
+      <li>Tomar muestra de tamaño n de S <em>con reemplazo</em></li>
+      <li>Calcular estadístico de interés (ej: mediana)</li>
+      <li>Repetir B = 10,000 veces</li>
+      <li>IC 95% = percentiles 2.5 y 97.5 de las B medianas</li>
+    </ol>
+    <p><span class="badge badge-ok">✅ Ventaja</span> No asume ninguna distribución, trabaja con datos reales<br>
+    <span class="badge badge-warn">⚠️ Desventaja</span> Solo puede generar valores dentro del rango original</p>
+  </div>
+  <div class="card">
+    <h4>Paramétrico (Monte Carlo)</h4>
+    <p><strong>Cuándo:</strong> Tienes justificación teórica para asumir una distribución (ej: Lognormal).</p>
+    <ol>
+      <li>Ajustar distribución: estimar µ̂, σ̂ de los datos</li>
+      <li>Generar B muestras de tamaño n desde esa distribución</li>
+      <li>Calcular estadístico en cada muestra</li>
+      <li>IC 95% = percentiles 2.5 y 97.5</li>
+    </ol>
+    <p><span class="badge badge-ok">✅ Ventaja</span> Genera valores fuera del rango observado, eficiente con n muy pequeño<br>
+    <span class="badge badge-critic">❌ Desventaja</span> Si el modelo asumido es incorrecto, todo el resultado está sesgado</p>
+  </div>
+</div>
+
+<div class="alerta"><strong>¿Por qué SE clásico = s/√n falla con outliers?</strong> Con S = [2, 3, 2.5, 4, 3.1, 120]: la media = 22.4 no representa nada real, la varianza explota por 120 al cuadrado, y el IC clásico puede producir límites negativos (tiempo negativo = imposible físicamente). Con n=6 el Teorema Central del Límite no aplica.</div>
+
+<span class="formula">IC 95% bootstrap = [percentil_2.5(medianas_boot), percentil_97.5(medianas_boot)]</span>
+<span class="formula">Bootstrap paramétrico (Lognormal): µ_log = mean(log(S)), σ_log = std(log(S)) → muestrear de lognormal(µ_log, σ_log)</span>
+
+<!-- ══════════════════════════════════════════════════════════════
+     6. eCDF
+══════════════════════════════════════════════════════════════ -->
+<h2>6 · eCDF — Función de Distribución Empírica Acumulada</h2>
+
+<div class="cols2">
+  <div>
+    <h3>¿Qué es?</h3>
+    <p>El eCDF es la fracción de datos que son ≤ a un valor x. Es completamente empírico: no asume ninguna distribución. Se construye ordenando los datos y asignando probabilidades acumuladas.</p>
+    <span class="formula">F̂(x) = (número de observaciones ≤ x) / n</span>
+    <h4>Cómo leerlo para decisiones de negocio:</h4>
+    <ul>
+      <li><strong>SLA ≤ 24h al 80%:</strong> localizar x=24 en eje X → subir hasta curva → leer F̂(24). Si F̂(24) ≥ 0.80: cumple ✅</li>
+      <li><strong>P(ticket &gt; 40h):</strong> leer F̂(40) → calcular 1 - F̂(40)</li>
+    </ul>
+    <p><em>Regla complemento:</em></p>
+    <span class="formula">P(X > t) = 1 - F̂(t)</span>
+  </div>
+  <div>
+    <h3>¿Por qué no usar Normal para tiempos?</h3>
+    <ul>
+      <li><strong>Límite físico:</strong> Normal tiene soporte (−∞, +∞) → asigna probabilidad a tiempos negativos. Imposible.</li>
+      <li><strong>Asimetría:</strong> histogramas de tiempos muestran pico izquierdo + cola larga derecha. Normal es simétrica.</li>
+      <li><strong>Q-Q Plot:</strong> puntos se desvían de la línea en las colas → confirma no-normalidad</li>
+    </ul>
+    <h4>Familia correcta para tiempos de espera:</h4>
+    <p>Gamma, Lognormal, Weibull, Exponencial. Soporte en [0, ∞), cola derecha larga.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     7. LOF — LOCAL OUTLIER FACTOR
+══════════════════════════════════════════════════════════════ -->
+<h2>7 · LOF — Detección de Anomalías por Densidad</h2>
+
+<p>LOF detecta outliers comparando la <strong>densidad local</strong> de un punto con la de sus vecinos. Un punto es anómalo si su densidad es mucho menor que la de sus vecinos (está en una zona poco poblada comparado con su entorno).</p>
+
+<table>
+  <tr><th>Paso</th><th>Concepto</th><th>Definición</th></tr>
+  <tr>
+    <td><span class="num-tag">1</span></td>
+    <td><strong>Distancia-k (k-distance)</strong></td>
+    <td>Distancia del punto p a su k-ésimo vecino más cercano. Define el "radio de búsqueda"</td>
+  </tr>
+  <tr>
+    <td><span class="num-tag">2</span></td>
+    <td><strong>Distancia de alcance (reach-distance)</strong></td>
+    <td>max(k-distance(vecino), distancia real a vecino). Suaviza distancias muy pequeñas para evitar inestabilidad numérica</td>
+  </tr>
+  <tr>
+    <td><span class="num-tag">3</span></td>
+    <td><strong>Densidad de alcance local (LRD)</strong></td>
+    <td>Inversa del promedio de reach-distances del punto p a sus k vecinos. Alta LRD = zona densa. Baja LRD = zona dispersa</td>
+  </tr>
+  <tr>
+    <td><span class="num-tag">4</span></td>
+    <td><strong>LOF Score</strong></td>
+    <td>Promedio de (LRD_vecino / LRD_p) para los k vecinos. LOF ≈ 1: punto normal. LOF >> 1: anomalía (su zona es menos densa que sus vecinos)</td>
+  </tr>
+</table>
+
+<div class="cols2">
+  <div class="tip"><strong>Cuándo usar LOF:</strong> Cuando los outliers dependen del contexto local (hay zonas de diferente densidad en los datos). No asume ninguna distribución global.</div>
+  <div class="info"><strong>LOF &gt; 1.5 o 2:</strong> señal de anomalía. El umbral exacto depende del dominio. LOF = 1 significa densidad igual a sus vecinos = punto normal.</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     8. COMPARACIÓN DE TENDENCIA CENTRAL Y DISTRIBUCIONES
+══════════════════════════════════════════════════════════════ -->
+<h2>8 · Tendencia Central, Comparación de Distribuciones y EDA</h2>
+
+<div class="cols3">
+  <div class="card">
+    <h4>Media (X̄)</h4>
+    <ul>
+      <li><strong>Cuándo:</strong> distribución simétrica, sin outliers</li>
+      <li><strong>Problema:</strong> muy sensible a outliers extremos (un valor de 120 infla toda la media)</li>
+      <li>Normal, Uniforme</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Mediana</h4>
+    <ul>
+      <li><strong>Cuándo:</strong> datos asimétricos, con outliers, ordinales</li>
+      <li><strong>Ventaja:</strong> robusta, no se distorsiona por extremos</li>
+      <li>Lognormal → mediana = e^µ</li>
+      <li>Ingreso, tiempos de resolución</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Moda</h4>
+    <ul>
+      <li><strong>Cuándo:</strong> variables categóricas o distribuciones multimodales</li>
+      <li><strong>Problema:</strong> sesga imputación hacia clase dominante</li>
+    </ul>
+  </div>
+</div>
+
+<h3>EDA — Análisis Exploratorio de Datos</h3>
+<table>
+  <tr><th>Herramienta EDA</th><th>Para qué</th><th>Qué buscar</th></tr>
+  <tr><td><strong>Histograma</strong></td><td>Ver forma de distribución</td><td>Asimetría, bimodalidad, outliers visibles, cola izquierda/derecha</td></tr>
+  <tr><td><strong>Q-Q Plot</strong></td><td>Verificar normalidad visualmente</td><td>Si los puntos siguen la línea diagonal → Normal. Desviación en colas → no Normal</td></tr>
+  <tr><td><strong>Box Plot</strong></td><td>Comparar distribuciones entre grupos</td><td>Mediana, IQR, bigotes, puntos fuera (outliers)</td></tr>
+  <tr><td><strong>eCDF</strong></td><td>Distribución acumulada sin asumir modelo</td><td>SLAs, percentiles, probabilidades empíricas</td></tr>
+  <tr><td><strong>Scatter Plot</strong></td><td>Relación entre 2 variables</td><td>Lineal → Pearson. Monótona no lineal → Spearman/Kendall. Clústeres → LOF</td></tr>
+</table>
+
+<div class="cols2">
+  <div class="info">
+    <strong>Hipótesis nula H₀ en regresión lineal:</strong> H₀: β_i = 0 (el coeficiente no es significativo, la variable no aporta al modelo). Si p &lt; 0.05: el coeficiente es estadísticamente significativo.
+  </div>
+  <div class="info">
+    <strong>Comparación de distribuciones:</strong> Superponer eCDF o histogramas de dos grupos. KS test para diferencia formal. Si las curvas se separan visualmente → diferencia real.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     9. TABLA DECISIONES RÁPIDAS DE ANALISTA
+══════════════════════════════════════════════════════════════ -->
+<h2>9 · Guía Rápida de Decisiones — "¿Qué hago si...?"</h2>
+
+<table>
+  <tr><th>Situación</th><th>Decisión correcta</th><th>Razón</th></tr>
+  <tr>
+    <td>Los datos tienen muchos outliers o asimetría fuerte (tiempos, latencias)</td>
+    <td><strong>Mann-Whitney U</strong> en lugar de t-test</td>
+    <td>Trabaja con rangos, no con medias. Los outliers solo obtienen el rango más alto, no explotan el cálculo</td>
+  </tr>
+  <tr>
+    <td>n = 6 con un valor de 120 entre datos de 2-4</td>
+    <td><strong>Bootstrap no paramétrico</strong> para IC de la mediana</td>
+    <td>SE clásico asume normalidad y n grande. Aquí viola ambos. La media no representa los datos</td>
+  </tr>
+  <tr>
+    <td>VIF = 16.67 en X₁</td>
+    <td><strong>Eliminar X₁</strong> o aplicar PCA/Ridge</td>
+    <td>94% de su información ya está en X₂ y X₃. Retenerla destruye la estabilidad de la matriz X'X</td>
+  </tr>
+  <tr>
+    <td>Satisfacción 1-5 estrellas con miles de calificaciones "4"</td>
+    <td><strong>Kendall τ</strong> (no Pearson, no Spearman)</td>
+    <td>Ordinal + miles de empates. Kendall penaliza empates en denominador. Pearson viola escala de intervalo</td>
+  </tr>
+  <tr>
+    <td>χ² arroja celda con E_ij = 2.1</td>
+    <td><strong>Fisher Exacta</strong> o combinar categorías</td>
+    <td>χ² requiere todas E_ij ≥ 5. Con E = 2.1, el estadístico se infla artificialmente por el denominador pequeño</td>
+  </tr>
+  <tr>
+    <td>Histograma asimétrico con cola derecha, Q-Q Plot curvado</td>
+    <td>Modelar con <strong>Gamma, Lognormal o Exponencial</strong></td>
+    <td>Normal es simétrica y tiene soporte negativo → imposible para tiempos/ingresos</td>
+  </tr>
+  <tr>
+    <td>Verificar SLA: "80% de tickets en ≤ 24h"</td>
+    <td>Leer <strong>F̂(24) en el eCDF</strong></td>
+    <td>eCDF da directamente P(X ≤ 24) sin asumir distribución. Si ≥ 0.80 → cumple</td>
+  </tr>
+  <tr>
+    <td>Dos grupos, varianzas distintas (Levene p &lt; 0.05)</td>
+    <td><strong>Welch t-test</strong> (no t-Student estándar)</td>
+    <td>Welch no asume varianzas iguales (heterocedasticidad). t-Student clásico asume σ₁² = σ₂²</td>
+  </tr>
+  <tr>
+    <td>3 grupos o más, datos normales</td>
+    <td><strong>ANOVA</strong></td>
+    <td>t-test solo compara 2 grupos. Hacer múltiples t-tests infla el error tipo I</td>
+  </tr>
+  <tr>
+    <td>Conteo de eventos por unidad de tiempo, enteros, sin techo</td>
+    <td><strong>Poisson</strong></td>
+    <td>Eventos discretos independientes en intervalo fijo. E[X] = Var[X] = λ</td>
+  </tr>
+  <tr>
+    <td>Datos de ingreso o salarios, siempre positivos, muy sesgados</td>
+    <td><strong>Lognormal</strong>. Usar <em>mediana = e^µ</em> como tendencia central</td>
+    <td>La media aritmética se infla por los valores extremos. La mediana es más representativa</td>
+  </tr>
+</table>
+
+<!-- ══════════════════════════════════════════════════════════════
+     10. PREGUNTAS PRÁCTICAS TIPO EXAMEN
+══════════════════════════════════════════════════════════════ -->
+<h2 class="page-break">10 · Preguntas Prácticas Tipo Examen</h2>
+
+<div class="pregunta">
+  <div class="q">❓ P1. Un analista compara tiempos de carga de dos apps (n=5000 c/u). Levene: p=0.000. t-Welch: t=0.05, p=0.293. Concluye "no hay diferencia". ¿Qué error cometió y qué harías tú?</div>
+  <div class="a"><strong>Error:</strong> El t-test compara <em>medias</em>. Con datos asimétricos (latencias) la media es engañosa — App B puede tener mediana más baja pero picos extremos. El analista ignora que los SLAs se miden en percentiles (P95, P99), no en medias. <strong>Corrección:</strong> Mann-Whitney U, que compara rangos y es robusto a picos extremos. Un p-value de 0.293 solo dice que las medias no difieren, pero dice nada sobre las colas.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P2. Tipo de tarjeta vs tipo de fraude. χ²=8.45, p=0.076. ¿Qué concluyes? La celda "Platino × Robo físico" tiene E_ij=2.1. ¿Qué problema hay?</div>
+  <div class="a"><strong>Conclusión correcta:</strong> "Con α=0.05, no hay evidencia estadística suficiente para rechazar H₀ de independencia." (NUNCA "aceptamos H₀"). <strong>Problema E_ij=2.1:</strong> Viola el supuesto de χ² (todas E_ij ≥ 5). El estadístico se infla artificialmente porque al dividir por 2.1 cualquier diferencia (O-E) se amplifica. El p-value es no confiable. <strong>Solución:</strong> Fisher Exacta o combinar "Oro + Platino" en "Premium".</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P3. S = [2, 3, 2.5, 4, 3.1, 120]. Calcula el SE clásico. ¿Por qué es un desastre? ¿Qué harías?</div>
+  <div class="a"><strong>SE clásico:</strong> s ≈ 47.8 (inflada por 120), SE = 47.8/√6 ≈ 19.5. El IC clásico daría algo como [Media ± 2×SE] = [22.4 ± 39] → límite inferior negativo: ¡tiempo negativo! Imposible. <strong>Solución:</strong> Bootstrap no paramétrico para la mediana. Mediana observada = 3.05h, que sí representa el grupo. El IC bootstrap excluye el valor 120 de la estimación de tendencia central.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P4. R² de regresión auxiliar X₁ ~ X₂ + X₃ = 0.94. Calcula VIF₁ e interpreta qué le pasa al modelo.</div>
+  <div class="a"><strong>VIF₁ = 1/(1-0.94) = 1/0.06 = 16.67</strong> → Multicolinealidad severa (umbral crítico: VIF > 10). <strong>Al modelo:</strong> La columna X₁ de la matriz es casi combinación lineal de X₂ y X₃ → det(X'X) ≈ 0 → X'X es cuasi-singular → β̂ = (X'X)⁻¹X'y es inestable. Los errores estándar de todos los coeficientes explotan, los t-tests pierden significancia aunque las variables sí importen. <strong>Decisión:</strong> Eliminar X₁ (ya está contenida en las demás), o PCA, o Ridge.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P5. Tienes horas de uso vs satisfacción (1-5 estrellas) con miles de empates en "4". ¿Pearson, Spearman o Kendall? Justifica.</div>
+  <div class="a"><strong>Kendall τ-b.</strong> Razón: (1) Satisfacción es ordinal, no continua → Pearson viola supuesto de escala de intervalo. (2) La relación es monótona no lineal → Pearson subestima la asociación. (3) Miles de empates en "4" → Spearman asigna rangos promedio y se distorsiona. Kendall penaliza empates directamente en su denominador: τ_b = (C-D)/√[(C+D+E_X)(C+D+E_Y)], dando estimación más estable y con interpretación directa: probabilidad de concordancia menos discordancia.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P6. El histograma de tiempos de resolución muestra pico alto a la izquierda y cola larga a la derecha. El Q-Q plot muestra desviación en las colas. El eCDF marca F̂(24)≈0.66 y F̂(40)≈0.88. El SLA exige 80% en ≤24h. ¿Qué distribución, cumple el SLA, y P(X>40h)?</div>
+  <div class="a"><strong>Distribución:</strong> Gamma o Lognormal (soporte ≥0, asimetría positiva marcada). Normal es imposible (daría probabilidad a tiempos negativos). <strong>SLA:</strong> F̂(24) = 0.66 &lt; 0.80 → <em>NO se cumple</em>, solo 66% en ≤24h, 14 puntos por debajo. <strong>Riesgo:</strong> P(X>40) = 1 - F̂(40) = 1 - 0.88 = <em>0.12 (12%)</em>. Con 1000 tickets/mes ≈ 120 tickets exceden 40h mensualmente.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P7. ¿Qué prueba usas para cada caso? (a) Comparar ventas de 4 regiones, datos normales. (b) Tiempo entre pedidos vs tiempo de entrega, relación curva logarítmica. (c) Género del cliente vs canal de compra. (d) Latencia de dos servidores con distribución fuertemente asimétrica.</div>
+  <div class="a">(a) <strong>ANOVA</strong> — 3+ grupos, datos normales. (b) <strong>Spearman o Kendall</strong> — relación monótona no lineal, variables continuas. (c) <strong>Chi-cuadrada (χ²)</strong> — dos variables categóricas, verificar E_ij ≥ 5. (d) <strong>Mann-Whitney U</strong> — datos asimétricos, comparar 2 grupos por rangos sin asumir distribución.</div>
+</div>
+
+<div class="pregunta">
+  <div class="q">❓ P8. Diferencia entre bootstrap paramétrico y no paramétrico. ¿Cuándo falla cada uno?</div>
+  <div class="a"><strong>No paramétrico:</strong> re-muestrea los datos crudos con reemplazo. Falla si n es muy pequeño (pocas combinaciones posibles) y si necesitas valores fuera del rango observado. <strong>Paramétrico (Monte Carlo):</strong> ajusta una distribución y muestrea de ella → puede generar valores nuevos, mejor con n muy pequeño. Falla si el modelo asumido es incorrecto: "basura entra, basura sale". Si la distribución asumida no es la real, todo el IC está sesgado.</div>
+</div>
+
+<!-- PIE -->
+<div style="margin-top: 20px; border-top: 2px solid var(--azul); padding-top: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 10px; color: #475569;">
+  <div><strong>Flujo Shapiro-Wilk:</strong> Normal → t-test/ANOVA | No normal → Mann-Whitney/Kruskal-Wallis</div>
+  <div><strong>Flujo Levene:</strong> Varianzas iguales → t-Student | Varianzas distintas → Welch</div>
+  <div><strong>Flujo correlación:</strong> Lineal continua → Pearson | Monótona/outliers → Spearman | Ordinal/empates → Kendall</div>
+</div>
+
+</body>
+</html>

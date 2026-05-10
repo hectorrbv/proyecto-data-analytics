@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# LaTeX (artefactos de compilación, NO el .tex ni el .pdf final)
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# IDE
+.vscode/
+.idea/
+
+# Editor temporales
+*~
+*.swp
